@@ -1,0 +1,8 @@
+[package]
+name = "ray-tracer"
+version = "0.1.0"
+authors = ["Alessandro Genova <ales.genova@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+num-traits = { version = "0.2", default-features = false }
