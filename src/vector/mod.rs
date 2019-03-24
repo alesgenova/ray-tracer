@@ -37,6 +37,13 @@ impl<T> Vec3<T>
         &mut self.data
     }
 
+    pub fn set_data(&mut self, data: &[T]) {
+        assert!(data.len() >= 3);
+        for i in 0..3 {
+            self.data[i] = data[i];
+        }
+    }
+
     fn add(this: &Vec3<T>, other: &Vec3<T>, result: &mut Vec3<T>) {
         let data = result.get_data_mut();
         for i in 0..3 {
@@ -479,5 +486,14 @@ mod tests {
         v1.normalize();
         assert_eq!(v1.norm(), 1.0);
 
+    }
+
+    #[test]
+    fn set() {
+        let mut v = Vec3::<f64>::new();
+        assert_eq!(v.get_data(), [0.0, 0.0, 0.0]);
+        let data = [1.0, 2.0, 3.0];
+        v.set_data(&data);
+        assert_eq!(v.get_data(), [1.0, 2.0, 3.0]);
     }
 }
