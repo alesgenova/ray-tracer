@@ -72,36 +72,20 @@ impl<T> Vec3<T>
         }
     }
 
-    fn dot(&self, other: &Vec3<T>) -> T {
+    pub fn dot(&self, other: &Vec3<T>) -> T {
         let mut result = T::zero();
         for i in 0..3 {
             result = result + self.data[i] * other.data[i];
         }
         result
     }
-}
 
-impl Vec3<f64> {
-    fn norm(&self) -> f64 {
+    pub fn norm(&self) -> T {
         let n2 = self.dot(self);
         n2.sqrt()
     }
 
-    fn normalize(&mut self) {
-        let n = self.norm();
-        for i in 0..3 {
-            self.data[i] = self.data[i] / n;
-        }
-    }
-}
-
-impl Vec3<f32> {
-    fn norm(&self) -> f32 {
-        let n2 = self.dot(self);
-        n2.sqrt()
-    }
-
-    fn normalize(&mut self) {
+    pub fn normalize(&mut self) {
         let n = self.norm();
         for i in 0..3 {
             self.data[i] = self.data[i] / n;
@@ -479,13 +463,6 @@ mod tests {
         assert_eq!(v1.norm(), 3.0);
         v1.normalize();
         assert_eq!(v1.norm(), 1.0);
-
-        let data = vec!(1.0, 2.0, 2.0);
-        let mut v1 = Vec3::<f32>::from_slice(&data);
-        assert_eq!(v1.norm(), 3.0);
-        v1.normalize();
-        assert_eq!(v1.norm(), 1.0);
-
     }
 
     #[test]

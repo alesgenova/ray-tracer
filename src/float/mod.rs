@@ -1,6 +1,21 @@
 use num_traits::float::{FloatCore as NumFloat};
 
-pub trait Float : NumFloat {}
+pub trait Number {
+  fn sqrt(&self) -> Self;
+}
+
+impl Number for f64 {
+  fn sqrt(&self) -> Self {
+    f64::sqrt(*self)
+  }
+}
+impl Number for f32 {
+  fn sqrt(&self) -> Self {
+    f32::sqrt(*self)
+  }
+}
+
+pub trait Float : NumFloat + Number {}
 
 impl Float for f64 {}
 impl Float for f32 {}
