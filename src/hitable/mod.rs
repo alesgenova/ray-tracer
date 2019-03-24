@@ -2,6 +2,8 @@ use crate::float::Float;
 use crate::vector::Vec3;
 use crate::ray::Ray;
 
+pub mod sphere;
+
 #[derive(Debug)]
 pub struct Hit<T>
     where T: Float
