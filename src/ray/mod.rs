@@ -1,6 +1,7 @@
 use crate::float::Float;
 use crate::vector::Vec3;
 
+#[derive(Debug)]
 pub struct Ray<T>
     where T: Float
 {
