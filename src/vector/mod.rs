@@ -80,6 +80,16 @@ impl<T> Vec3<T>
         result
     }
 
+    pub fn cross(&self, other: &Vec3<T>) -> Vec3<T> {
+        let mut result = [T::zero(); 3];
+        for i in 0..3 {
+            let j = (i + 1) % 3;
+            let k = (i + 2) % 3;
+            result[i] = self.get_data()[j] * other.get_data()[k] - self.get_data()[k] * other.get_data()[j];
+        }
+        Vec3::from_array(result)
+    }
+
     pub fn norm(&self) -> T {
         let n2 = self.dot(self);
         n2.sqrt()
@@ -454,6 +464,23 @@ mod tests {
 
         d = v1.dot(&(&v2 / 2.0));
         assert_eq!(d, 14.0);
+    }
+
+    #[test]
+    fn cross() {
+        let data = vec!(1.0, 0.0, 0.0);
+        let v1 = Vec3::<f64>::from_slice(&data);
+        let data = vec!(0.0, 1.0, 0.0);
+        let v2 = Vec3::<f64>::from_slice(&data);
+        let v3 = v1.cross(&v2);
+        assert_eq!(v3.get_data(), [0.0, 0.0, 1.0]);
+
+        let data = vec!(7.0, 3.0, -4.0);
+        let v1 = Vec3::<f64>::from_slice(&data);
+        let data = vec!(1.0, 0.0, 6.0);
+        let v2 = Vec3::<f64>::from_slice(&data);
+        let v3 = v1.cross(&v2);
+        assert_eq!(v3.get_data(), [18.0, -46.0, -3.0]);
     }
 
     #[test]
