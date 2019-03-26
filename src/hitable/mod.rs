@@ -8,9 +8,9 @@ pub mod sphere;
 pub struct Hit<T>
     where T: Float
 {
-    point: Vec3<T>,
-    normal: Vec3<T>,
-    t: T
+    pub point: Vec3<T>,
+    pub normal: Vec3<T>,
+    pub t: T
 }
 
 pub trait Hitable<T>
