@@ -25,3 +25,12 @@ pub fn random_point_in_sphere<T>(radius: T) -> Vec3<T>
 
     point
 }
+
+pub fn reflect<T>(direction: &Vec3<T>, normal: &Vec3<T>) -> Vec3<T>
+    where T: Float
+{
+    let two = T::from(2.0).unwrap();
+    let c = direction.dot(normal);
+    let reflection = direction - normal * two * c;
+    reflection
+}
