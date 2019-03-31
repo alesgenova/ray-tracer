@@ -35,7 +35,7 @@ impl<T> Scene<T>
 
         for i in 0..self.actors.len() {
             let hitable = &self.actors[i].hitable;
-            let last_hit = hitable.hit(ray, T::zero(), T::from(10000).unwrap());
+            let last_hit = hitable.hit(ray, T::from(0.00000000001).unwrap(), T::from(10000).unwrap());
             current_hit = match (current_hit, last_hit) {
                 (Some(c_hit), Some(l_hit)) => {
                     if c_hit.t < l_hit.t {
@@ -64,14 +64,27 @@ impl<T> Scene<T>
         }
     }
 
-    pub fn get_color(&self, ray: &Ray<T>) -> Vec3<T> {
+    pub fn get_color(&self, ray: &Ray<T>, reflection: usize, max_reflection: usize) -> Vec3<T> {
         let current_hit = self.get_hit(ray);
 
         match current_hit {
             Some((actor_idx, hit)) => {
                 let actor = &self.actors[actor_idx];
                 let scatter = actor.material.scatter(ray, &hit);
-                return Vec3::<T>::from_slice(scatter.attenuation.get_data());
+                let attenuation = Vec3::<T>::from_slice(scatter.attenuation.get_data());
+                let scattered_ray = scatter.scattered;
+                match scattered_ray {
+                    Some(ray_out) => {
+                        if (reflection < max_reflection) {
+                            return attenuation * self.get_color(&ray_out, reflection + 1, max_reflection);
+                        } else {
+                            return attenuation;
+                        }
+                    },
+                    None => {
+                        return attenuation;
+                    }
+                }
             },
             None => {
                 return Vec3::<T>::from_slice(self.background.get_data());

@@ -31,15 +31,17 @@ impl<T> Image<T>
 pub struct Renderer {
     width: usize,
     height: usize,
-    sampling: usize
+    sampling: usize,
+    reflections: usize
 }
 
 impl Renderer {
-    pub fn new(width: usize, height: usize, sampling: usize) -> Self {
+    pub fn new(width: usize, height: usize, sampling: usize, reflections: usize) -> Self {
         Renderer {
             width,
             height,
-            sampling
+            sampling,
+            reflections
         }
     }
 
@@ -55,7 +57,7 @@ impl Renderer {
                 let v = two * (T::from(j).unwrap() / T::from(self.height).unwrap()) - T::one();
                 let u = two * (T::from(i).unwrap() / T::from(self.width).unwrap()) - T::one();
                 let ray = camera.get_ray(u, v);
-                color = scene.get_color(&ray);
+                color = scene.get_color(&ray, 0, self.reflections);
             },
             // Multisampling
             _ => {
@@ -65,7 +67,7 @@ impl Renderer {
                     let v = two * (T::from(j).unwrap() / T::from(self.height).unwrap()) - T::one();
                     let u = two * (T::from(i).unwrap() / T::from(self.width).unwrap()) - T::one();
                     let ray = camera.get_ray(u, v);
-                    color = color + scene.get_color(&ray);
+                    color = color + scene.get_color(&ray, 0, self.reflections);
                 }
                 let sampling = T::from(self.sampling).unwrap();
                 color = color / sampling;
