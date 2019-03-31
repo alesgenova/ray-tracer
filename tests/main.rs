@@ -10,6 +10,7 @@ use ray_tracer::renderer::Renderer;
 use ray_tracer::renderer::Image;
 use ray_tracer::material::plain::PlainMaterial;
 use ray_tracer::material::lambertian::LambertianMaterial;
+use ray_tracer::material::metal::MetalMaterial;
 use ray_tracer::actor::Actor;
 
 fn to_u8(f: f64) -> u8 {
@@ -49,7 +50,8 @@ fn print_ppm(image: &Image<f64>) {
 fn basic_scene() {
     // return;
     let mut scene = Scene::<f64>::new();
-    scene.set_background(Vec3::from_array([0.4, 0.4, 0.5]));
+    // scene.set_background(Vec3::from_array([0.2, 0.2, 0.7]));
+    scene.set_background(Vec3::from_array([0.75, 0.75, 0.75]));
 
     let r = 1.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, r, -4.0]), r);
@@ -59,13 +61,13 @@ fn basic_scene() {
 
     let r = 1.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([-r * 2.0, r, -3.5]), r);
-    let material = LambertianMaterial::<f64> { color: Vec3::from_array([0.2, 1.0, 0.2])};
+    let material = MetalMaterial::<f64> { color: Vec3::from_array([0.2, 1.0, 0.2]), fuzziness: 0.0};
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let r = 1.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([r * 2.0, r, -3.5]), r);
-    let material = LambertianMaterial::<f64> { color: Vec3::from_array([0.2, 0.2, 1.0])};
+    let material = MetalMaterial::<f64> { color: Vec3::from_array([0.2, 0.2, 1.0]), fuzziness: 0.15};
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
@@ -77,15 +79,15 @@ fn basic_scene() {
     scene.add_actor(actor);
 
     // Sphere used as floor
-    let r = 100000.0;
+    let r = 200.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, -r, 0.0]), r);
     let material = LambertianMaterial::<f64> { color: Vec3::from_array([0.75, 0.75, 0.75])};
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let mul = 12;
-    let width = 120 * mul;
-    let height = 80 * mul;
+    let mul = 40;
+    let width = 12 * mul;
+    let height = 8 * mul;
     let aspect = width as f64 / height as f64;
     let mut camera = PerspectiveCamera::<f64>::new();
     camera.set_aspect(aspect);
@@ -93,7 +95,7 @@ fn basic_scene() {
     camera.set_position(&[0.0, 2.0, 0.0]);
     camera.set_direction(&[0.0, -0.125, -1.0]);
 
-    let renderer = Renderer::new(width, height, 8, 8);
+    let renderer = Renderer::new(width, height, 4, 8);
     let image = renderer.render(&scene, &camera);
     print_ppm(&image);
 }
