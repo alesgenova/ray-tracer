@@ -31,7 +31,8 @@ impl<T> Material<T> for MetalMaterial<T>
         let mut normal = Vec3::from_slice(hit.normal.get_data());
         normal.normalize();
         let origin = Vec3::from_slice(hit.point.get_data());
-        let direction = MetalMaterial::<T>::reflect(incident.get_direction(), &normal);
+        let mut direction = MetalMaterial::<T>::reflect(incident.get_direction(), &normal);
+        direction.normalize();
         let scattered = Some(Ray::<T>::from_vec(origin, direction));
         Scatter::<T> {
             attenuation,

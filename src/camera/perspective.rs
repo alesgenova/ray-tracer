@@ -94,7 +94,8 @@ impl<T> Camera<T> for PerspectiveCamera<T>
         let half_width = self.aspect * half_height;
         let center = &self.position + &self.w;
 
-        let ray_direction = &center + &self.u * r * half_width + &self.v * s * half_height - &self.position;
+        let mut ray_direction = &center + &self.u * r * half_width + &self.v * s * half_height - &self.position;
+        ray_direction.normalize();
         Ray::<T>::from_slice(self.position.get_data(), ray_direction.get_data())
     }
 }

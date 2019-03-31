@@ -41,11 +41,12 @@ impl<T> Material<T> for LambertianMaterial<T>
     where T: Float
 {
     fn scatter(&self, incident: &Ray<T>, hit: &Hit<T>) -> Scatter<T> {
-        let attenuation = Vec3::<T>::from_slice(self.color.get_data());
+        let attenuation = Vec3::<T>::from_slice(self.color.get_data()) * T::from(0.5).unwrap();
         let mut normal = Vec3::from_slice(hit.normal.get_data());
         normal.normalize();
         let origin = Vec3::from_slice(hit.point.get_data());
-        let direction = normal + LambertianMaterial::<T>::random_point_in_sphere(T::one());
+        let mut direction = normal + LambertianMaterial::<T>::random_point_in_sphere(T::one());
+        direction.normalize();
         let scattered = Some(Ray::<T>::from_vec(origin, direction));
         Scatter::<T> {
             attenuation,
