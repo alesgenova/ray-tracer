@@ -42,6 +42,13 @@ impl<T> Ray<T>
         }
     }
 
+    pub fn from_ray(ray: &Ray<T>) -> Self {
+        Ray {
+            origin: Vec3::from_slice(ray.get_origin().get_data()),
+            direction: Vec3::from_slice(ray.get_direction().get_data())
+        }
+    }
+
     pub fn get_origin(&self) -> &Vec3<T> {
         &self.origin
     }
