@@ -58,6 +58,13 @@ impl<T> Vec3<T>
         }
     }
 
+    fn mul_vec(this: &Vec3<T>, other: &Vec3<T>, result: &mut Vec3<T>) {
+        let data = result.get_data_mut();
+        for i in 0..3 {
+            data[i] = this.data[i] * other.data[i];
+        }
+    }
+
     fn mul(this: &Vec3<T>, other: T, result: &mut Vec3<T>) {
         let data = result.get_data_mut();
         for i in 0..3 {
@@ -203,6 +210,58 @@ impl<T> ops::Sub<&Vec3<T>> for &Vec3<T>
     fn sub(self, other: &Vec3<T>) -> Vec3<T> {
         let mut result = Vec3::<T>::new();
         Vec3::<T>::sub(self, other, &mut result);
+        result
+    }
+}
+
+// Vec3 * Vec3 (multiply each item)
+impl<T> ops::Mul<Vec3<T>> for Vec3<T>
+    where T: Float
+{
+    type Output = Vec3<T>;
+
+    fn mul(self, other: Vec3<T>) -> Vec3<T> {
+        let mut result = Vec3::<T>::new();
+        Vec3::<T>::mul_vec(&self, &other, &mut result);
+        result
+    }
+}
+
+// Vec3 * &Vec3
+impl<T> ops::Mul<&Vec3<T>> for Vec3<T>
+    where T: Float
+{
+    type Output = Vec3<T>;
+
+    fn mul(self, other: &Vec3<T>) -> Vec3<T> {
+        let mut result = Vec3::<T>::new();
+        Vec3::<T>::mul_vec(&self, other, &mut result);
+        result
+    }
+}
+
+// &Vec3 * Vec3
+impl<T> ops::Mul<Vec3<T>> for &Vec3<T>
+    where T: Float
+{
+    type Output = Vec3<T>;
+
+    fn mul(self, other: Vec3<T>) -> Vec3<T> {
+        let mut result = Vec3::<T>::new();
+        Vec3::<T>::mul_vec(self, &other, &mut result);
+        result
+    }
+}
+
+// &Vec3 * &Vec3
+impl<T> ops::Mul<&Vec3<T>> for &Vec3<T>
+    where T: Float
+{
+    type Output = Vec3<T>;
+
+    fn mul(self, other: &Vec3<T>) -> Vec3<T> {
+        let mut result = Vec3::<T>::new();
+        Vec3::<T>::mul_vec(self, other, &mut result);
         result
     }
 }
