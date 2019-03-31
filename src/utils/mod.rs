@@ -34,3 +34,32 @@ pub fn reflect<T>(direction: &Vec3<T>, normal: &Vec3<T>) -> Vec3<T>
     let reflection = direction - normal * two * c;
     reflection
 }
+
+pub fn refract<T>(direction: &Vec3<T>, normal: &Vec3<T>, n0: T, n1: T) -> Vec3<T>
+    where T: Float
+{
+    let ratio = n0 / n1;
+    let c = direction.dot(normal);
+    let discriminant = T::one() - ratio * ratio * (T::one() - c * c);
+    if discriminant > T::zero() {
+        let prob = reflection_probability(direction, normal, n0);
+        let mut rng = rand::thread_rng();
+        if T::from(rng.gen::<f64>()).unwrap() < prob  {
+            return reflect(direction, normal);
+        }
+        return (direction - normal * c) * ratio - normal * discriminant.sqrt();
+    } else {
+        return reflect(direction, normal);
+    }
+}
+
+pub fn reflection_probability<T>(direction: &Vec3<T>, normal: &Vec3<T>, n: T) -> T
+    where T: Float
+{
+    let cosine = - n * direction.dot(normal);
+    let mut r0 = (T::one() - n) / (T::one() + n);
+    r0 = r0 * r0;
+    let mut pow5 = T::one() - cosine;
+    pow5 = pow5 * pow5 * pow5 * pow5 * pow5;
+    r0 + (T::one() - r0) * pow5
+}

@@ -6,6 +6,7 @@ use crate::hit::Hit;
 pub mod plain;
 pub mod lambertian;
 pub mod metal;
+pub mod dielectric;
 
 pub struct Scatter<T>
     where T: Float
