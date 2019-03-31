@@ -9,6 +9,8 @@ pub mod renderer;
 pub mod material;
 pub mod actor;
 
+mod utils;
+
 #[cfg(test)]
 mod tests {
 
