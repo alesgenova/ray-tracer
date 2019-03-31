@@ -18,11 +18,12 @@ impl<T> LambertianMaterial<T>
     fn random_point_in_sphere(radius: T) -> Vec3<T> {
         let mut point = Vec3::<T>::new();
         let mut rng = rand::thread_rng();
+        let two = T::from(2.0).unwrap();
 
         loop {
-            let x = T::from(rng.gen::<f64>()).unwrap();
-            let y = T::from(rng.gen::<f64>()).unwrap();
-            let z = T::from(rng.gen::<f64>()).unwrap();
+            let x = T::from(rng.gen::<f64>()).unwrap() * two - T::one();
+            let y = T::from(rng.gen::<f64>()).unwrap() * two - T::one();
+            let z = T::from(rng.gen::<f64>()).unwrap() * two - T::one();
 
             let len = (x * x + y * y + z * z).sqrt();
 
