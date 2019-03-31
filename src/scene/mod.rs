@@ -1,12 +1,14 @@
 use crate::float::Float;
 use crate::vector::Vec3;
 use crate::ray::Ray;
-use crate::hitable::{Hitable, Hit};
+use crate::hit::Hit;
+use crate::actor::Actor;
 
 pub struct Scene<T>
     where T: Float
 {
-    actors: Vec<Box<Hitable<T>>>
+    actors: Vec<Actor<T>>,
+    background: Vec3<T>
 }
 
 impl<T> Scene<T>
@@ -14,44 +16,66 @@ impl<T> Scene<T>
 {
     pub fn new() -> Self {
         Scene {
-            actors: vec!()
+            actors: vec!(),
+            background: Vec3::<T>::new()
         }
     }
 
-    pub fn add_actor(&mut self, actor: Box<Hitable<T>>) {
+    pub fn set_background(&mut self, background: Vec3<T>) {
+        self.background = background;
+    }
+
+    pub fn add_actor(&mut self, actor: Actor<T>) {
         self.actors.push(actor);
     }
 
-    pub fn get_color(&self, ray: &Ray<T>) -> Vec3<T> {
+    pub fn get_hit(&self, ray: &Ray<T>) -> Option<(usize, Hit<T>)> {
         let mut current_hit: Option<Hit<T>> = None;
+        let mut current_actor: usize = 0;
 
         for i in 0..self.actors.len() {
-            let actor = &self.actors[i];
-            let last_hit = actor.hit(ray, T::zero(), T::from(10000).unwrap());
-            current_hit = match current_hit {
-                Some(c_hit) => {
-                    match last_hit {
-                        Some(l_hit) => {
-                            if c_hit.t < l_hit.t {
-                                Some(c_hit)
-                            } else {
-                                Some(l_hit)
-                            }
-                        },
-                        None => {
-                            Some(c_hit)
-                        }
+            let hitable = &self.actors[i].hitable;
+            let last_hit = hitable.hit(ray, T::zero(), T::from(10000).unwrap());
+            current_hit = match (current_hit, last_hit) {
+                (Some(c_hit), Some(l_hit)) => {
+                    if c_hit.t < l_hit.t {
+                        Some(c_hit)
+                    } else {
+                        current_actor = i;
+                        Some(l_hit)
                     }
                 },
-                None => {
-                    last_hit
+                (Some(c_hit), None) => {
+                    Some(c_hit)
+                },
+                (None, Some(l_hit)) => {
+                    current_actor = i;
+                    Some(l_hit)
+                },
+                (None, None) => {
+                    None
                 }
             }
         }
 
         match current_hit {
-            Some(_) => {return Vec3::<T>::from_array([T::one(); 3]);},
-            None => {return Vec3::<T>::from_array([T::zero(); 3]);}
+            Some(hit) => { return Some((current_actor, hit)); },
+            None => { return None; }
+        }
+    }
+
+    pub fn get_color(&self, ray: &Ray<T>) -> Vec3<T> {
+        let current_hit = self.get_hit(ray);
+
+        match current_hit {
+            Some((actor_idx, hit)) => {
+                let actor = &self.actors[actor_idx];
+                let scatter = actor.material.scatter(ray, &hit);
+                return Vec3::<T>::from_slice(scatter.attenuation.get_data());
+            },
+            None => {
+                return Vec3::<T>::from_slice(self.background.get_data());
+            }
         }
     }
 }
