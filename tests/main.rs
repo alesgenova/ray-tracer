@@ -70,21 +70,21 @@ fn basic_scene() {
 
     // Sphere used as floor
     let r = 10000.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, -r - 0.01, 0.0]), r);
+    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, -r, 0.0]), r);
     let material = PlainMaterial::<f64> { color: Vec3::from_array([0.75, 0.5, 0.0])};
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let mul = 4;
-    let width = 240 * mul;
-    let height = 160 * mul;
+    let width = 120 * mul;
+    let height = 80 * mul;
     let aspect = width as f64 / height as f64;
     let mut camera = PerspectiveCamera::<f64>::new();
     camera.set_aspect(aspect);
     camera.set_fov(0.5 * std::f64::consts::PI);
     camera.set_position(&[0.0, 1.0, 0.0]);
 
-    let renderer = Renderer::new(width, height);
+    let renderer = Renderer::new(width, height, 0);
     let image = renderer.render(&scene, &camera);
     print_ppm(&image);
 }
