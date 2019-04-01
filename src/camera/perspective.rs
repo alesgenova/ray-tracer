@@ -15,6 +15,8 @@ pub struct PerspectiveCamera<T>
     w: Vec3<T>,
     aspect: T,
     fov: T,
+    half_height: T,
+    half_width: T,
     lock: CameraLock
 }
 
@@ -31,6 +33,8 @@ impl<T> PerspectiveCamera<T>
             v: Vec3::<T>::new(),
             w: Vec3::<T>::new(),
             aspect: T::one(),
+            half_height: T::one(),
+            half_width: T::one(),
             fov: T::from(0.5 * 3.1415).unwrap(),
             lock: CameraLock::Direction
         };
@@ -44,6 +48,7 @@ impl<T> PerspectiveCamera<T>
 
     pub fn set_aspect(&mut self, aspect: T) {
         self.aspect = aspect;
+        self.update();
     }
 
     pub fn get_fov(&self) -> T {
@@ -52,6 +57,7 @@ impl<T> PerspectiveCamera<T>
 
     pub fn set_fov(&mut self, fov: T) {
         self.fov = fov;
+        self.update();
     }
 
     pub fn update(&mut self) {
@@ -69,6 +75,8 @@ impl<T> PerspectiveCamera<T>
         self.u.normalize();
         self.v.set_data(self.w.cross(&self.u).get_data());
         self.v.normalize();
+        self.half_height = ( T::from(0.5).unwrap() * self.fov ).tan();
+        self.half_width = self.aspect * self.half_height;
     }
 }
 
@@ -113,11 +121,9 @@ impl<T> Camera<T> for PerspectiveCamera<T>
     }
 
     fn get_ray(&self, r: T, s: T) -> Ray<T> {
-        let half_height = ( T::from(0.5).unwrap() * self.fov ).tan();
-        let half_width = self.aspect * half_height;
         let center = &self.position + &self.w;
 
-        let mut ray_direction = &center + &self.u * r * half_width + &self.v * s * half_height - &self.position;
+        let mut ray_direction = &center + &self.u * r * self.half_width + &self.v * s * self.half_height - &self.position;
         ray_direction.normalize();
         Ray::<T>::from_slice(self.position.get_data(), ray_direction.get_data())
     }
