@@ -4,6 +4,11 @@ use crate::ray::Ray;
 
 pub mod perspective;
 
+pub enum CameraLock {
+    Direction,
+    LookAt
+}
+
 pub trait Camera<T>
     where T: Float
 {
@@ -12,6 +17,9 @@ pub trait Camera<T>
 
     fn get_direction(&self) -> &Vec3<T>;
     fn set_direction(&mut self, direction: &[T]);
+
+    fn get_lookat(&self) -> &Vec3<T>;
+    fn set_lookat(&mut self, lookat: &[T]);
 
     fn get_up(&self) -> &Vec3<T>;
     fn set_up(&mut self, up: &[T]);

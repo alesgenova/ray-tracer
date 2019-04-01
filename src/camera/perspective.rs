@@ -1,19 +1,21 @@
 use crate::float::Float;
 use crate::vector::Vec3;
 use crate::ray::Ray;
-use crate::camera::Camera;
+use crate::camera::{Camera, CameraLock};
 
 pub struct PerspectiveCamera<T>
     where T: Float
 {
     position: Vec3<T>,
     direction: Vec3<T>,
+    lookat: Vec3<T>,
     up: Vec3<T>,
     u: Vec3<T>,
     v: Vec3<T>,
     w: Vec3<T>,
     aspect: T,
-    fov: T
+    fov: T,
+    lock: CameraLock
 }
 
 impl<T> PerspectiveCamera<T>
@@ -23,12 +25,14 @@ impl<T> PerspectiveCamera<T>
         let mut camera = PerspectiveCamera {
             position: Vec3::<T>::from_array([T::zero(), T::zero(), T::zero()]),
             direction: Vec3::<T>::from_array([T::zero(), T::zero(), -T::one()]),
+            lookat: Vec3::<T>::from_array([T::zero(), T::zero(), -T::one()]),
             up: Vec3::<T>::from_array([T::zero(), T::one(), T::zero()]),
             u: Vec3::<T>::new(),
             v: Vec3::<T>::new(),
             w: Vec3::<T>::new(),
             aspect: T::one(),
-            fov: T::from(0.5 * 3.1415).unwrap()
+            fov: T::from(0.5 * 3.1415).unwrap(),
+            lock: CameraLock::Direction
         };
         camera.update();
         camera
@@ -51,7 +55,15 @@ impl<T> PerspectiveCamera<T>
     }
 
     pub fn update(&mut self) {
-        self.w.set_data(self.direction.get_data());
+        let direction = match self.lock {
+            CameraLock::Direction => {
+                self.get_direction() * T::one()
+            },
+            CameraLock::LookAt => {
+                self.get_lookat() - self.get_position()
+            }
+        };
+        self.w.set_data(direction.get_data());
         self.w.normalize();
         self.u.set_data(self.w.cross(&self.up).get_data());
         self.u.normalize();
@@ -77,6 +89,17 @@ impl<T> Camera<T> for PerspectiveCamera<T>
 
     fn set_direction(&mut self, direction: &[T]) {
         self.direction.set_data(direction);
+        self.lock = CameraLock::Direction;
+        self.update();
+    }
+
+    fn get_lookat(&self) -> &Vec3<T> {
+        &self.lookat
+    }
+
+    fn set_lookat(&mut self, lookat: &[T]) {
+        self.lookat.set_data(lookat);
+        self.lock = CameraLock::LookAt;
         self.update();
     }
 
