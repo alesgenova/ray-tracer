@@ -24,5 +24,11 @@ pub trait Camera<T>
     fn get_up(&self) -> &Vec3<T>;
     fn set_up(&mut self, up: &[T]);
 
+    fn get_aperture(&self) -> T;
+    fn set_aperture(&mut self, aperture: T);
+
+    fn get_focus(&self) -> T;
+    fn set_focus(&mut self, focus: T);
+
     fn get_ray(&self, r: T, s: T) -> Ray<T>;
 }

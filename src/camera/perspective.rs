@@ -2,6 +2,7 @@ use crate::float::Float;
 use crate::vector::Vec3;
 use crate::ray::Ray;
 use crate::camera::{Camera, CameraLock};
+use crate::utils::random_point_in_circle;
 
 pub struct PerspectiveCamera<T>
     where T: Float
@@ -9,6 +10,7 @@ pub struct PerspectiveCamera<T>
     position: Vec3<T>,
     direction: Vec3<T>,
     lookat: Vec3<T>,
+    center: Vec3<T>,
     up: Vec3<T>,
     u: Vec3<T>,
     v: Vec3<T>,
@@ -17,6 +19,8 @@ pub struct PerspectiveCamera<T>
     fov: T,
     half_height: T,
     half_width: T,
+    aperture: T,
+    focus: T,
     lock: CameraLock
 }
 
@@ -28,6 +32,7 @@ impl<T> PerspectiveCamera<T>
             position: Vec3::<T>::from_array([T::zero(), T::zero(), T::zero()]),
             direction: Vec3::<T>::from_array([T::zero(), T::zero(), -T::one()]),
             lookat: Vec3::<T>::from_array([T::zero(), T::zero(), -T::one()]),
+            center: Vec3::<T>::from_array([T::zero(), T::zero(), -T::one()]),
             up: Vec3::<T>::from_array([T::zero(), T::one(), T::zero()]),
             u: Vec3::<T>::new(),
             v: Vec3::<T>::new(),
@@ -35,6 +40,8 @@ impl<T> PerspectiveCamera<T>
             aspect: T::one(),
             half_height: T::one(),
             half_width: T::one(),
+            aperture: T::zero(),
+            focus: T::one(),
             fov: T::from(0.5 * 3.1415).unwrap(),
             lock: CameraLock::Direction
         };
@@ -75,7 +82,8 @@ impl<T> PerspectiveCamera<T>
         self.u.normalize();
         self.v.set_data(self.w.cross(&self.u).get_data());
         self.v.normalize();
-        self.half_height = ( T::from(0.5).unwrap() * self.fov ).tan();
+        self.center = &self.position + &self.w * self.focus;
+        self.half_height = ( T::from(0.5).unwrap() * self.fov ).tan() * self.focus;
         self.half_width = self.aspect * self.half_height;
     }
 }
@@ -120,12 +128,34 @@ impl<T> Camera<T> for PerspectiveCamera<T>
         self.update();
     }
 
-    fn get_ray(&self, r: T, s: T) -> Ray<T> {
-        let center = &self.position + &self.w;
+    fn get_aperture(&self) -> T {
+        self.aperture
+    }
 
-        let mut ray_direction = &center + &self.u * r * self.half_width + &self.v * s * self.half_height - &self.position;
+    fn set_aperture(&mut self, aperture: T) {
+        self.aperture = aperture;
+        self.update();
+    }
+
+    fn get_focus(&self) -> T {
+        self.focus
+    }
+
+    fn set_focus(&mut self, focus: T) {
+        self.focus = focus;
+        self.update();
+    }
+
+    fn get_ray(&self, r: T, s: T) -> Ray<T> {
+        let offset = if self.aperture > T::zero() {
+            random_point_in_circle(self.aperture * T::from(0.5).unwrap())
+        } else {
+            Vec3::<T>::new()
+        };
+        let mut ray_direction = &self.center + &self.u * r * self.half_width + &self.v * s * self.half_height - &self.position - &offset;
         ray_direction.normalize();
-        Ray::<T>::from_slice(self.position.get_data(), ray_direction.get_data())
+        let origin = &self.position + &offset;
+        Ray::<T>::from_slice(origin.get_data(), ray_direction.get_data())
     }
 }
 

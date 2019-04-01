@@ -26,6 +26,28 @@ pub fn random_point_in_sphere<T>(radius: T) -> Vec3<T>
     point
 }
 
+pub fn random_point_in_circle<T>(radius: T) -> Vec3<T>
+    where T: Float
+{
+    let mut point = Vec3::<T>::new();
+    let mut rng = rand::thread_rng();
+    let two = T::from(2.0).unwrap();
+
+    loop {
+        let x = T::from(rng.gen::<f64>()).unwrap() * two - T::one();
+        let y = T::from(rng.gen::<f64>()).unwrap() * two - T::one();
+
+        let len = (x * x + y * y).sqrt();
+
+        if len < T::one() {
+            point.set_data(&[x * radius, y * radius, T::zero()]);
+            break;
+        }
+    }
+
+    point
+}
+
 pub fn reflect<T>(direction: &Vec3<T>, normal: &Vec3<T>) -> Vec3<T>
     where T: Float
 {
