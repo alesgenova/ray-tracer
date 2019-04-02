@@ -41,7 +41,7 @@ impl<T> BoundingBox<T>
         for i in 0..3 {
             let (min_self, max_self) = self.get_axis_bounds(i);
             let (min_other, max_other) = other.get_axis_bounds(i);
-            if min_other < min_self || max_other >= max_self {
+            if min_other < min_self || max_other > max_self {
                 return false;
             }
         }
@@ -52,7 +52,7 @@ impl<T> BoundingBox<T>
         for i in 0..3 {
             let (min_self, max_self) = self.get_axis_bounds(i);
             let (min_other, max_other) = other.get_axis_bounds(i);
-            if max_other < min_self || min_other >= max_self {
+            if max_other <= min_self || min_other >= max_self {
                 return false;
             }
         }
@@ -67,7 +67,18 @@ impl<T> BoundingBox<T>
         &self.p1
     }
 
-    fn get_axis_bounds(&self, axis: usize) -> (T, T) {
+    pub fn get_volume(&self) -> T {
+        let mut volume = T::one();
+
+        for i in 0..3 {
+            let (min, max) = self.get_axis_bounds(i);
+            volume = volume * (max - min);
+        }
+
+        volume
+    }
+
+    pub fn get_axis_bounds(&self, axis: usize) -> (T, T) {
         let mut min = self.p0.get_data()[axis];
         let mut max = self.p1.get_data()[axis];
         if min > max {
@@ -175,5 +186,13 @@ mod tests {
             let ray = Ray::from_vec(origin, direction);
             assert!(!box0.hit(&ray, 0.0, 100.0));
         }
+    }
+
+    #[test]
+    fn volume() {
+        let p0 = Vec3::from_array([-1.0, 2.0, -4.0]);
+        let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
+        let box0 = BoundingBox::new(p0, p1);
+        assert_eq!(box0.get_volume(), 6.0 * 2.0 * 7.0);
     }
 }
