@@ -13,6 +13,15 @@ impl<T> BoundingBox<T>
     where T : Float
 {
     pub fn new(p0: Vec3<T>, p1: Vec3<T>) -> Self {
+        let mut p0 = p0;
+        let mut p1 = p1;
+        // Ensure the min x,y,z is always in p0, and the max is always in p1
+        let (min_x, max_x) = BoundingBox::<T>::calculate_axis_bounds(&p0, &p1, 0);
+        let (min_y, max_y) = BoundingBox::<T>::calculate_axis_bounds(&p0, &p1, 1);
+        let (min_z, max_z) = BoundingBox::<T>::calculate_axis_bounds(&p0, &p1, 2);
+
+        p0.set_data(&[min_x, min_y, min_z]);
+        p1.set_data(&[max_x, max_y, max_z]);
         BoundingBox {p0, p1}
     }
 
@@ -59,6 +68,23 @@ impl<T> BoundingBox<T>
         true
     }
 
+    pub fn expand(&mut self, other: &BoundingBox<T>) -> bool {
+        let mut expanded = false;
+        for i in 0..3 {
+            let (min_self, max_self) = self.get_axis_bounds(i);
+            let (min_other, max_other) = other.get_axis_bounds(i);
+            if min_other < min_self {
+                self.p0.get_data_mut()[i] = min_other;
+                expanded = true;
+            }
+            if max_other > max_self {
+                self.p1.get_data_mut()[i] = max_other;
+                expanded = true;
+            }
+        }
+        expanded
+    }
+
     pub fn get_p0(&self) -> &Vec3<T> {
         &self.p0
     }
@@ -78,14 +104,20 @@ impl<T> BoundingBox<T>
         volume
     }
 
-    pub fn get_axis_bounds(&self, axis: usize) -> (T, T) {
-        let mut min = self.p0.get_data()[axis];
-        let mut max = self.p1.get_data()[axis];
+    pub fn calculate_axis_bounds(p0: &Vec3<T>, p1: &Vec3<T>, axis: usize) -> (T, T) {
+        let mut min = p0.get_data()[axis];
+        let mut max = p1.get_data()[axis];
         if min > max {
             let tmp = min;
             min = max;
             max = tmp;
         }
+        (min, max)
+    }
+
+    pub fn get_axis_bounds(&self, axis: usize) -> (T, T) {
+        let min = self.p0.get_data()[axis];
+        let max = self.p1.get_data()[axis];
         (min, max)
     }
 }
@@ -194,5 +226,32 @@ mod tests {
         let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
         let box0 = BoundingBox::new(p0, p1);
         assert_eq!(box0.get_volume(), 6.0 * 2.0 * 7.0);
+    }
+
+    #[test]
+    fn expand() {
+        let p0 = Vec3::from_array([0.0, 0.0, 0.0]);
+        let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
+        let mut box0 = BoundingBox::new(p0, p1);
+
+        let p0 = Vec3::from_array([1.0, 1.0, 1.0]);
+        let p1 = Vec3::from_array([2.0, 2.0, 2.0]);
+        let box1 = BoundingBox::new(p0, p1);
+
+        assert!(box0.contains(&box1));
+        assert!(!box0.expand(&box1));
+        assert!(box0.contains(&box1));
+
+        let p0 = Vec3::from_array([0.0, 0.0, 0.0]);
+        let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
+        let mut box0 = BoundingBox::new(p0, p1);
+
+        let p0 = Vec3::from_array([-1.0, -1.0, -1.0]);
+        let p1 = Vec3::from_array([2.0, 2.0, 2.0]);
+        let box1 = BoundingBox::new(p1, p0);
+
+        assert!(!box0.contains(&box1));
+        assert!(box0.expand(&box1));
+        assert!(box0.contains(&box1));
     }
 }
