@@ -8,6 +8,7 @@ pub mod scene;
 pub mod renderer;
 pub mod material;
 pub mod actor;
+pub mod boundingbox;
 
 mod utils;
 
