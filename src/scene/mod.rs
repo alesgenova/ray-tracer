@@ -1,14 +1,22 @@
+use std::rc::Rc;
+
 use crate::float::Float;
 use crate::vector::Vec3;
 use crate::ray::Ray;
-use crate::hit::Hit;
 use crate::actor::Actor;
+use crate::boundingbox::BoundingBox;
+use crate::tree::{Tree, TreeType};
+use crate::tree::oct::Octree;
+use crate::tree::linear::LinearTree;
 
 pub struct Scene<T>
     where T: Float
 {
-    actors: Vec<Actor<T>>,
-    background: Vec3<T>
+    actors: Vec<Rc<Actor<T>>>,
+    background: Vec3<T>,
+    bounds: BoundingBox<T>,
+    tree: Box<dyn Tree<T>>,
+    tree_type: TreeType
 }
 
 impl<T> Scene<T>
@@ -17,7 +25,10 @@ impl<T> Scene<T>
     pub fn new() -> Self {
         Scene {
             actors: vec!(),
-            background: Vec3::<T>::new()
+            background: Vec3::<T>::new(),
+            bounds: BoundingBox::<T>::new(Vec3::<T>::new(), Vec3::<T>::new()),
+            tree: Box::new(LinearTree::new()),
+            tree_type: TreeType::Linear
         }
     }
 
@@ -26,50 +37,22 @@ impl<T> Scene<T>
     }
 
     pub fn add_actor(&mut self, actor: Actor<T>) {
-        self.actors.push(actor);
-    }
+        let _expanded = self.bounds.expand(&actor.hitable.get_bounds());
+        let actor = Rc::new(actor);
+        self.actors.push(Rc::clone(&actor));
+        let success = self.tree.add_actor(actor);
 
-    pub fn get_hit(&self, ray: &Ray<T>) -> Option<(usize, Hit<T>)> {
-        let mut current_hit: Option<Hit<T>> = None;
-        let mut current_actor: usize = 0;
-
-        for i in 0..self.actors.len() {
-            let hitable = &self.actors[i].hitable;
-            let last_hit = hitable.hit(ray, T::from(0.00000000001).unwrap(), T::from(10000).unwrap());
-            current_hit = match (current_hit, last_hit) {
-                (Some(c_hit), Some(l_hit)) => {
-                    if c_hit.t < l_hit.t {
-                        Some(c_hit)
-                    } else {
-                        current_actor = i;
-                        Some(l_hit)
-                    }
-                },
-                (Some(c_hit), None) => {
-                    Some(c_hit)
-                },
-                (None, Some(l_hit)) => {
-                    current_actor = i;
-                    Some(l_hit)
-                },
-                (None, None) => {
-                    None
-                }
-            }
-        }
-
-        match current_hit {
-            Some(hit) => { return Some((current_actor, hit)); },
-            None => { return None; }
+        if !success {
+            self.rebuild_tree();
         }
     }
 
     pub fn get_color(&self, ray: &Ray<T>, reflection: usize, max_reflection: usize) -> Vec3<T> {
-        let current_hit = self.get_hit(ray);
+        let current_hit = self.tree.get_hit(ray, T::from(0.00000000001).unwrap(), T::from(10000.0).unwrap());
 
         match current_hit {
-            Some((actor_idx, hit)) => {
-                let actor = &self.actors[actor_idx];
+            Some((actor, hit)) => {
+                // let actor = &self.actors[actor_idx];
                 let scatter = actor.material.scatter(ray, &hit);
                 let attenuation = Vec3::<T>::from_slice(scatter.attenuation.get_data());
                 let scattered_ray = scatter.scattered;
@@ -90,5 +73,38 @@ impl<T> Scene<T>
                 return Vec3::<T>::from_slice(self.background.get_data());
             }
         }
+    }
+
+    pub fn set_tree_type(&mut self, tree_type: TreeType) {
+        self.tree_type = tree_type;
+        self.rebuild_tree();
+    }
+
+    fn rebuild_tree(&mut self) {
+        let mut tree: Box<dyn Tree<T>> = match self.tree_type {
+            TreeType::Linear => {
+                Box::new(LinearTree::new())
+            },
+            TreeType::Oct => {
+                let mut tree_bounds = BoundingBox::<T>::new(
+                    Vec3::<T>::from_slice(self.bounds.get_p0().get_data()),
+                    Vec3::<T>::from_slice(self.bounds.get_p1().get_data())
+                );
+                tree_bounds.make_cube();
+                let length = tree_bounds.get_axis_length(0);
+                let pad = length * T::from(0.1).unwrap();
+                for i in 0..3 {
+                    tree_bounds.pad_axis(pad, i);
+                }
+                Box::new(Octree::<T>::new(tree_bounds))
+            }
+        };
+
+        for i in 0..self.actors.len() {
+            let actor = Rc::clone(&self.actors[i]);
+            tree.add_actor(actor);
+        }
+
+        self.tree = tree;
     }
 }

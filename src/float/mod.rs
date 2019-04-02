@@ -24,7 +24,7 @@ impl Number for f32 {
   }
 }
 
-pub trait Float : NumFloat + Number {}
+pub trait Float : 'static + NumFloat + Number {}
 
 impl Float for f64 {}
 impl Float for f32 {}
