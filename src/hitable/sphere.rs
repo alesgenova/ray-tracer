@@ -3,29 +3,37 @@ use crate::vector::Vec3;
 use crate::ray::Ray;
 use crate::hit::Hit;
 use crate::hitable::Hitable;
+use crate::boundingbox::BoundingBox;
 
 pub struct Sphere<T>
     where T: Float
 {
     center: Vec3<T>,
-    radius: T
+    radius: T,
+    bounds: BoundingBox<T>
 }
 
 impl<T> Sphere<T>
     where T: Float
 {
     pub fn new() -> Self {
-        Sphere {
+        let mut sphere = Sphere {
             center: Vec3::<T>::new(),
-            radius: T::one()
-        }
+            radius: T::one(),
+            bounds: BoundingBox::<T>::new(Vec3::<T>::new(), Vec3::<T>::new())
+        };
+        sphere.update_bounds();
+        sphere
     }
 
     pub fn from(center: Vec3<T>, radius: T) -> Self {
-        Sphere {
+        let mut sphere = Sphere {
             center,
-            radius
-        }
+            radius,
+            bounds: BoundingBox::<T>::new(Vec3::<T>::new(), Vec3::<T>::new())
+        };
+        sphere.update_bounds();
+        sphere
     }
 
     pub fn get_center(&self) -> &Vec3<T> {
@@ -34,6 +42,7 @@ impl<T> Sphere<T>
 
     pub fn set_center(&mut self, center: &[T]) {
         self.center.set_data(center);
+        self.update_bounds();
     }
 
     pub fn get_radius(&self) -> T {
@@ -42,6 +51,14 @@ impl<T> Sphere<T>
 
     pub fn set_radius(&mut self, radius: T) {
         self.radius = radius;
+        self.update_bounds();
+    }
+
+    fn update_bounds(&mut self) {
+        let one = Vec3::<T>::from_array([T::one(), T::one(), T::one()]);
+        let p0 = self.get_center() - &one * self.get_radius();
+        let p1 = self.get_center() + &one * self.get_radius();
+        self.bounds = BoundingBox::<T>::new(p0, p1);
     }
 }
 
@@ -89,6 +106,10 @@ impl<T> Hitable<T> for Sphere<T>
         };
 
         Some(hit)
+    }
+
+    fn get_bounds(&self) -> &BoundingBox<T> {
+        &self.bounds
     }
 }
 
@@ -162,5 +183,15 @@ mod tests {
             },
             None => {}
         }
+    }
+
+    #[test]
+    fn bounds() {
+        let center = Vec3::from_array([1.0, 2.0, 3.0]);
+        let radius = 2.5;
+        let sphere = Sphere::<f64>::from(center, radius);
+        let bounds = sphere.get_bounds();
+        assert_eq!(bounds.get_p0().get_data(), [-1.5, -0.5, 0.5]);
+        assert_eq!(bounds.get_p1().get_data(), [3.5, 4.5, 5.5]);
     }
 }
