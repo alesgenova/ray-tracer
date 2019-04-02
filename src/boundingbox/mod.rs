@@ -104,7 +104,44 @@ impl<T> BoundingBox<T>
         volume
     }
 
-    pub fn calculate_axis_bounds(p0: &Vec3<T>, p1: &Vec3<T>, axis: usize) -> (T, T) {
+    pub fn get_axis_bounds(&self, axis: usize) -> (T, T) {
+        let min = self.p0.get_data()[axis];
+        let max = self.p1.get_data()[axis];
+        (min, max)
+    }
+
+    pub fn get_axis_length(&self, axis: usize) -> T {
+        let (min, max) = self.get_axis_bounds(axis);
+        max - min
+    }
+
+    pub fn make_cube(&mut self) {
+        let mut max_length = T::zero();
+        for i in 0..3 {
+            let length = self.get_axis_length(i);
+            if length > max_length {
+                max_length = length;
+            }
+        }
+
+        let half = T::from(0.5).unwrap();
+
+        for i in 0..3 {
+            let length = self.get_axis_length(i);
+            let pad = half * (max_length - length);
+            if pad > T::zero() {
+                self.pad_axis(pad, i);
+            }
+        }
+    }
+
+    pub fn pad_axis(&mut self, pad: T, axis: usize) {
+        let (min, max) = self.get_axis_bounds(axis);
+        self.p0.get_data_mut()[axis] = min - pad;
+        self.p1.get_data_mut()[axis] = max + pad;
+    }
+
+    fn calculate_axis_bounds(p0: &Vec3<T>, p1: &Vec3<T>, axis: usize) -> (T, T) {
         let mut min = p0.get_data()[axis];
         let mut max = p1.get_data()[axis];
         if min > max {
@@ -112,12 +149,6 @@ impl<T> BoundingBox<T>
             min = max;
             max = tmp;
         }
-        (min, max)
-    }
-
-    pub fn get_axis_bounds(&self, axis: usize) -> (T, T) {
-        let min = self.p0.get_data()[axis];
-        let max = self.p1.get_data()[axis];
         (min, max)
     }
 }
@@ -253,5 +284,49 @@ mod tests {
         assert!(!box0.contains(&box1));
         assert!(box0.expand(&box1));
         assert!(box0.contains(&box1));
+    }
+
+    #[test]
+    fn pad() {
+        let p0 = Vec3::from_array([0.0, 0.0, 0.0]);
+        let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
+        let box0 = BoundingBox::new(p0, p1);
+
+        let p0 = Vec3::from_array([0.0, 0.0, 0.0]);
+        let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
+        let mut box1 = BoundingBox::new(p0, p1);
+
+        assert!(box0.contains(&box1));
+        assert!(box1.contains(&box0));
+
+        box1.pad_axis(1.0, 0);
+        box1.pad_axis(2.0, 1);
+        box1.pad_axis(3.0, 2);
+        assert!(!box0.contains(&box1));
+        assert!(box1.contains(&box0));
+        assert_eq!(box1.get_axis_length(0), 7.0);
+        assert_eq!(box1.get_axis_length(1), 8.0);
+        assert_eq!(box1.get_axis_length(2), 9.0);
+    }
+
+    #[test]
+    fn make_cube() {
+        let p0 = Vec3::from_array([0.0, 0.0, 0.0]);
+        let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
+        let box0 = BoundingBox::new(p0, p1);
+
+        let p0 = Vec3::from_array([0.0, 0.0, 0.0]);
+        let p1 = Vec3::from_array([5.0, 4.0, 3.0]);
+        let mut box1 = BoundingBox::new(p0, p1);
+
+        assert!(box0.contains(&box1));
+        assert!(box1.contains(&box0));
+
+        box1.make_cube();
+        assert!(!box0.contains(&box1));
+        assert!(box1.contains(&box0));
+        assert_eq!(box1.get_axis_length(0), 5.0);
+        assert_eq!(box1.get_axis_length(1), 5.0);
+        assert_eq!(box1.get_axis_length(2), 5.0);
     }
 }
