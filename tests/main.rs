@@ -17,6 +17,7 @@ use ray_tracer::material::metal::MetalMaterial;
 use ray_tracer::material::dielectric::DielectricMaterial;
 use ray_tracer::actor::Actor;
 use ray_tracer::tree::TreeType;
+use ray_tracer::texture::uniform::UniformTexture;
 
 fn to_u8(f: f64) -> u8 {
     (f * 255.0) as u8
@@ -75,39 +76,45 @@ fn basic_scene() {
 
     let r = 1.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, r, -4.0]), r);
-    let material = LambertianMaterial::<f64> { color: Vec3::from_array([1.0, 0.2, 0.2])};
+    let texture = UniformTexture::new(Vec3::from_array([1.0, 0.2, 0.2]));
+    let material = LambertianMaterial::<f64>::new(Box::new(texture), 0.5);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let r = 1.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([-r * 2.0, r, -4.0]), r);
-    let material = MetalMaterial::<f64> { color: Vec3::from_array([0.2, 1.0, 0.2]), fuzziness: 0.0};
+    let texture = UniformTexture::new(Vec3::from_array([0.2, 1.0, 0.2]));
+    let material = MetalMaterial::<f64>::new(Box::new(texture), 0.0);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let r = 1.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([r * 2.0, r, -4.0]), r);
-    let material = DielectricMaterial::<f64> { color: Vec3::from_array([1.0, 1.0, 1.0]), n: 2.4};
+    let texture = UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0]));
+    let material = DielectricMaterial::<f64>::new(Box::new(texture), 2.4);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let r = 0.25;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, r, -5.0]), r);
-    let material = MetalMaterial::<f64> { color: Vec3::from_array([0.0, 0.0, 1.0]), fuzziness: 0.0};
+    let texture = UniformTexture::new(Vec3::from_array([0.0, 0.0, 1.0]));
+    let material = MetalMaterial::<f64>::new(Box::new(texture), 0.0);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     // Sphere used as light
     let r = 5.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 2.0 *r, -2.0]), r);
-    let material = PlainMaterial::<f64> { color: Vec3::from_array([1.0, 0.9, 0.9])};
+    let texture = UniformTexture::new(Vec3::from_array([1.0, 0.9, 0.9]));
+    let material = PlainMaterial::<f64>::new(Box::new(texture));
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     // Sphere used as floor
     let r = 500.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, -r, 0.0]), r);
-    let material = LambertianMaterial::<f64> { color: Vec3::from_array([0.75, 0.75, 0.75])};
+    let texture = UniformTexture::new(Vec3::from_array([0.75, 0.75, 0.75]));
+    let material = LambertianMaterial::<f64>::new(Box::new(texture), 0.5);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
@@ -138,11 +145,11 @@ fn basic_scene() {
     print_ppm(&image, "basic_scene.ppm");
 }
 
-#[test]
+// #[test]
 fn random_scene() {
     let mut scene = Scene::<f64>::new();
     // scene.set_background(Vec3::from_array([0.2, 0.2, 0.7]));
-    scene.set_background(Vec3::from_array([0.6, 0.8, 1.0]));
+    scene.set_background(Vec3::from_array([0.5, 0.7, 0.9]));
 
     const N_SPHERES_X : usize = 20;
     const N_SPHERES_Y : usize = N_SPHERES_X;
@@ -179,15 +186,16 @@ fn random_scene() {
             let sphere = Sphere::<f64>::from(Vec3::from_array([x, y, radius]), radius);
 
             let color = Vec3::from_array([rng.gen::<f64>(), rng.gen::<f64>(), rng.gen::<f64>()]);
+            let texture = Box::new(UniformTexture::new(color));
             let material_select = rng.gen::<f64>();
             let material : Box<Material<f64>> = if material_select < LAMBERTIAN_PROBABILITY {
-                Box::new(LambertianMaterial::<f64> { color })
+                Box::new(LambertianMaterial::<f64>::new(texture, 0.5))
             } else if material_select < LAMBERTIAN_PROBABILITY + METAL_PROBABILITY {
                 let fuzziness = MIN_FUZZINESS + (MAX_FUZZINESS - MIN_FUZZINESS) * rng.gen::<f64>();
-                Box::new(MetalMaterial::<f64> { color, fuzziness })
+                Box::new(MetalMaterial::<f64>::new(texture, fuzziness))
             } else {
-                let n = MIN_REFRACTIVE + (MAX_REFRACTIVE - MIN_REFRACTIVE) * rng.gen::<f64>();                
-                Box::new(DielectricMaterial::<f64> { color, n })
+                let n = MIN_REFRACTIVE + (MAX_REFRACTIVE - MIN_REFRACTIVE) * rng.gen::<f64>();
+                Box::new(DielectricMaterial::<f64>::new(texture, n))
             };
             let actor = Actor::<f64> { hitable: Box::new(sphere), material};
             scene.add_actor(actor);
@@ -198,44 +206,50 @@ fn random_scene() {
     let radius = 2.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 0.0, radius]), radius);
     let color = Vec3::from_array([1.0, 1.0, 1.0]);
-    let material = DielectricMaterial::<f64> { color, n: 1.5};
+    let texture = Box::new(UniformTexture::new(color));
+    let material = DielectricMaterial::<f64>::new(texture, 2.4);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, - 2.0 * radius, radius]), radius);
     let color = Vec3::from_array([0.9, 0.9, 0.9]);
-    let material = MetalMaterial::<f64> { color, fuzziness: 0.0};
+    let texture = Box::new(UniformTexture::new(color));
+    let material = MetalMaterial::<f64>::new(texture, 0.0);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 2.0 * radius, radius]), radius);
-    let color = Vec3::from_array([1.0, 0.85, 0.0]);
-    let material = MetalMaterial::<f64> { color, fuzziness: 0.5};
+    let color = Vec3::from_array([1.0, 0.15, 0.15]);
+    let texture = Box::new(UniformTexture::new(color));
+    let material = MetalMaterial::<f64>::new(texture, 0.25);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-
     // Sphere used as light
     let radius = 4.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, - 6.0, 10.0]), radius);
-    let material = PlainMaterial::<f64> { color: Vec3::from_array([1.0, 1.0, 1.0])};
+    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 1.0, 12.5]), radius);
+    let color = Vec3::from_array([1.0, 1.0, 1.0]);
+    let texture = Box::new(UniformTexture::new(color));
+    let material = PlainMaterial::<f64>::new(texture);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     // Sphere used as floor
     let radius = 2000.0;
+    let color = Vec3::from_array([1.0, 1.0, 1.0]);
+    let texture = Box::new(UniformTexture::new(color));
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 0.0, -radius]), radius);
-    let material = LambertianMaterial::<f64> { color: Vec3::from_array([1.25, 1.25, 1.25])};
+    let material = LambertianMaterial::<f64>::new(texture, 0.5);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let mul = 40;
-    let width = 12 * mul;
-    let height = 8 * mul;
+    let mul = 160;
+    let width = 16 * mul;
+    let height = 9 * mul;
     let aspect = width as f64 / height as f64;
     let mut camera = PerspectiveCamera::<f64>::new();
     camera.set_aspect(aspect);
-    camera.set_fov(0.3 * std::f64::consts::PI);
+    camera.set_fov(0.25 * std::f64::consts::PI);
     camera.set_position(&[-6.0, -10.0, 3.0]);
     camera.set_lookat(&[0.0, 0.0, 2.0]);
     camera.set_up(&[0.0, 0.0, 1.0]);
@@ -254,7 +268,7 @@ fn random_scene() {
     let image = renderer.render(&mut scene, &camera);
     print_ppm(&image, "random_scene_preview.ppm");
 
-    let renderer = Renderer::new(width, height, 4, 8);
+    let renderer = Renderer::new(width, height, 128, 16);
     let image = renderer.render(&scene, &camera);
     print_ppm(&image, "random_scene.ppm");
 }
@@ -296,7 +310,8 @@ fn tree() {
                 let sphere = Sphere::<f64>::from(Vec3::from_array([x, y, z]), radius);
 
                 let color = Vec3::from_array([rng.gen::<f64>(), rng.gen::<f64>(), rng.gen::<f64>()]);
-                let material : Box<Material<f64>> = Box::new(MetalMaterial { color, fuzziness: 0.0 });
+                let texture = Box::new(UniformTexture::new(color));
+                let material : Box<Material<f64>> = Box::new(MetalMaterial::new(texture, 0.0));
 
                 let actor = Actor::<f64> { hitable: Box::new(sphere), material};
                 scene.add_actor(actor);
@@ -305,8 +320,8 @@ fn tree() {
     }
 
     let mul = 8;
-    let width = 12 * mul;
-    let height = 8 * mul;
+    let width = 16 * mul;
+    let height = 9 * mul;
     let aspect = width as f64 / height as f64;
     let mut camera = PerspectiveCamera::<f64>::new();
     camera.set_aspect(aspect);
