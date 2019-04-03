@@ -2,6 +2,7 @@ use crate::float::Float;
 use crate::vector::Vec3;
 
 pub mod uniform;
+pub mod checker;
 
 pub trait Texture<T>
     where T: Float

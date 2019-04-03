@@ -18,6 +18,7 @@ use ray_tracer::material::dielectric::DielectricMaterial;
 use ray_tracer::actor::Actor;
 use ray_tracer::tree::TreeType;
 use ray_tracer::texture::uniform::UniformTexture;
+use ray_tracer::texture::checker::CheckerTexture;
 
 fn to_u8(f: f64) -> u8 {
     (f * 255.0) as u8
@@ -113,7 +114,12 @@ fn basic_scene() {
     // Sphere used as floor
     let r = 500.0;
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, -r, 0.0]), r);
-    let texture = UniformTexture::new(Vec3::from_array([0.75, 0.75, 0.75]));
+    let texture0 = UniformTexture::new(Vec3::from_array([0.75, 0.0, 0.0]));
+    let texture1 = UniformTexture::new(Vec3::from_array([0.0, 0.75, 0.0]));
+    let mut texture2 = CheckerTexture::new(Box::new(texture0), Box::new(texture1));
+    texture2.set_period(Vec3::from_array([0.5, 0.5, 0.5]));
+    let texture3 = UniformTexture::new(Vec3::from_array([0.0, 0.0, 0.75]));
+    let texture = CheckerTexture::new(Box::new(texture2), Box::new(texture3));
     let material = LambertianMaterial::<f64>::new(Box::new(texture), 0.5);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
@@ -130,7 +136,7 @@ fn basic_scene() {
 
     camera.set_position(&[4.0, 2.0, -1.0]);
     camera.set_lookat(&[0.0, 1.0, -4.0]);
-    camera.set_aperture(0.25);
+    // camera.set_aperture(0.25);
     let focus = (camera.get_lookat() - camera.get_position()).norm();
     camera.set_focus(focus);
 
@@ -145,7 +151,7 @@ fn basic_scene() {
     print_ppm(&image, "basic_scene.ppm");
 }
 
-// #[test]
+#[test]
 fn random_scene() {
     let mut scene = Scene::<f64>::new();
     // scene.set_background(Vec3::from_array([0.2, 0.2, 0.7]));
@@ -221,7 +227,7 @@ fn random_scene() {
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 2.0 * radius, radius]), radius);
     let color = Vec3::from_array([1.0, 0.15, 0.15]);
     let texture = Box::new(UniformTexture::new(color));
-    let material = MetalMaterial::<f64>::new(texture, 0.25);
+    let material = MetalMaterial::<f64>::new(texture, 0.1);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
@@ -236,14 +242,18 @@ fn random_scene() {
 
     // Sphere used as floor
     let radius = 2000.0;
-    let color = Vec3::from_array([1.0, 1.0, 1.0]);
-    let texture = Box::new(UniformTexture::new(color));
+    let color0 = Vec3::from_array([1.0, 1.0, 1.0]);
+    let color1 = Vec3::from_array([0.8, 0.8, 0.8]);
+    let texture0 = UniformTexture::new(color0);
+    let texture1 = UniformTexture::new(color1);
+    let texture = Box::new(CheckerTexture::new(Box::new(texture0), Box::new(texture1)));
+    // let texture = Box::new(UniformTexture::new(color));
     let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 0.0, -radius]), radius);
-    let material = LambertianMaterial::<f64>::new(texture, 0.5);
+    let material = LambertianMaterial::<f64>::new(texture, 0.75);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let mul = 160;
+    let mul = 40;
     let width = 16 * mul;
     let height = 9 * mul;
     let aspect = width as f64 / height as f64;
@@ -268,7 +278,7 @@ fn random_scene() {
     let image = renderer.render(&mut scene, &camera);
     print_ppm(&image, "random_scene_preview.ppm");
 
-    let renderer = Renderer::new(width, height, 128, 16);
+    let renderer = Renderer::new(width, height, 4, 8);
     let image = renderer.render(&scene, &camera);
     print_ppm(&image, "random_scene.ppm");
 }
