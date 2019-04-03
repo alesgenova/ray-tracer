@@ -142,11 +142,11 @@ fn basic_scene() {
 
     scene.set_tree_type(TreeType::Oct);
 
-    let renderer = Renderer::new(width, height, 0, 0);
+    let renderer = Renderer::new(width, height, 0, 0, false);
     let image = renderer.render(&mut scene, &camera);
     print_ppm(&image, "basic_scene_preview.ppm");
 
-    let renderer = Renderer::new(width, height, 4, 8);
+    let renderer = Renderer::new(width, height, 4, 8, false);
     let image = renderer.render(&mut scene, &camera);
     print_ppm(&image, "basic_scene.ppm");
 }
@@ -272,13 +272,13 @@ fn random_scene() {
     let focus = (camera.get_lookat() - camera.get_position()).norm();
     camera.set_focus(focus);
 
-    let renderer = Renderer::new(width, height, 0, 0);
+    let renderer = Renderer::new(width, height, 0, 0, false);
 
     scene.set_tree_type(TreeType::Oct);
     let image = renderer.render(&mut scene, &camera);
     print_ppm(&image, "random_scene_preview.ppm");
 
-    let renderer = Renderer::new(width, height, 4, 8);
+    let renderer = Renderer::new(width, height, 4, 8, false);
     let image = renderer.render(&scene, &camera);
     print_ppm(&image, "random_scene.ppm");
 }
@@ -344,7 +344,7 @@ fn tree() {
     let focus = (camera.get_lookat() - camera.get_position()).norm();
     camera.set_focus(focus);
 
-    let renderer = Renderer::new(width, height, 0, 0);
+    let renderer = Renderer::new(width, height, 0, 0, false);
 
     scene.set_tree_type(TreeType::Linear);
     let now = Instant::now();

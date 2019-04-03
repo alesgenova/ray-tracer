@@ -32,16 +32,18 @@ pub struct Renderer {
     width: usize,
     height: usize,
     sampling: usize,
-    reflections: usize
+    reflections: usize,
+    antialiasing: bool
 }
 
 impl Renderer {
-    pub fn new(width: usize, height: usize, sampling: usize, reflections: usize) -> Self {
+    pub fn new(width: usize, height: usize, sampling: usize, reflections: usize, antialiasing: bool) -> Self {
         Renderer {
             width,
             height,
             sampling,
-            reflections
+            reflections,
+            antialiasing
         }
     }
 
@@ -51,28 +53,28 @@ impl Renderer {
         let two = T::from(2.0).unwrap();
         let mut color = Vec3::<T>::new();
 
-        match self.sampling {
-            // No multisampling
-            0 => {
-                let v = two * (T::from(j).unwrap() / T::from(self.height).unwrap()) - T::one();
-                let u = two * (T::from(i).unwrap() / T::from(self.width).unwrap()) - T::one();
-                let ray = camera.get_ray(u, v);
-                color = scene.get_color(&ray, 0, self.reflections);
-            },
-            // Multisampling
-            _ => {
-                for k in 0..self.sampling {
-                    let i : f64 = (i as f64) + rng.gen::<f64>();
-                    let j : f64 = (j as f64) + rng.gen::<f64>();
-                    let v = two * (T::from(j).unwrap() / T::from(self.height).unwrap()) - T::one();
-                    let u = two * (T::from(i).unwrap() / T::from(self.width).unwrap()) - T::one();
-                    let ray = camera.get_ray(u, v);
+        let sampling = match self.sampling {
+            0 => 1,
+            _ => self.sampling
+        };
+
+        match self.antialiasing {
+            false => {
+                let ray = self.get_ray(i, j, camera, two, rng);
+                for _k in 0..sampling {
                     color = color + scene.get_color(&ray, 0, self.reflections);
                 }
-                let sampling = T::from(self.sampling).unwrap();
-                color = color / sampling;
+            },
+            true => {
+                for _k in 0..sampling {
+                    let ray = self.get_ray(i, j, camera, two, rng);
+                    color = color + scene.get_color(&ray, 0, self.reflections);
+                }
             }
         }
+
+        let sampling = T::from(sampling).unwrap();
+        color = color / sampling;
 
         color
     }
@@ -92,5 +94,28 @@ impl Renderer {
             }
         }
         image
+    }
+
+    fn get_ray<T>(&self, i: usize, j: usize, camera: &Camera<T>, two: T, rng: &mut ThreadRng) -> Ray<T>
+        where T: Float
+    {
+        let two = T::from(2.0).unwrap();
+
+        match self.antialiasing {
+            // If antialiasing is disabled, the ray always hits the pixel in the same position
+            false => {
+                let v = two * (T::from(j).unwrap() / T::from(self.height).unwrap()) - T::one();
+                let u = two * (T::from(i).unwrap() / T::from(self.width).unwrap()) - T::one();
+                camera.get_ray(u, v)
+            },
+            // If antializasing is enabled, the ray is randomly chosen in the vicinity of the pixel
+            true => {
+                let i : f64 = (i as f64) + rng.gen::<f64>();
+                let j : f64 = (j as f64) + rng.gen::<f64>();
+                let v = two * (T::from(j).unwrap() / T::from(self.height).unwrap()) - T::one();
+                let u = two * (T::from(i).unwrap() / T::from(self.width).unwrap()) - T::one();
+                camera.get_ray(u, v)
+            }
+        }
     }
 }
