@@ -5,8 +5,9 @@ use crate::ray::Ray;
 use crate::hit::Hit;
 use crate::actor::Actor;
 
-pub mod oct;
 pub mod linear;
+pub mod oct;
+pub mod binary;
 
 pub trait Tree<T>
     where T: Float
@@ -18,5 +19,6 @@ pub trait Tree<T>
 
 pub enum TreeType {
     Linear,
+    Binary,
     Oct
 }

@@ -6,8 +6,10 @@ use crate::ray::Ray;
 use crate::actor::Actor;
 use crate::boundingbox::BoundingBox;
 use crate::tree::{Tree, TreeType};
-use crate::tree::oct::Octree;
 use crate::tree::linear::LinearTree;
+use crate::tree::binary::BinaryTree;
+use crate::tree::oct::Octree;
+
 
 pub struct Scene<T>
     where T: Float
@@ -48,7 +50,7 @@ impl<T> Scene<T>
     }
 
     pub fn get_color(&self, ray: &Ray<T>, reflection: usize, max_reflection: usize) -> Vec3<T> {
-        let current_hit = self.tree.get_hit(ray, T::from(0.00000000001).unwrap(), T::from(10000.0).unwrap());
+        let current_hit = self.tree.get_hit(ray, T::from(0.000000001).unwrap(), T::from(10000000000.0).unwrap());
 
         match current_hit {
             Some((actor, hit)) => {
@@ -85,6 +87,9 @@ impl<T> Scene<T>
             TreeType::Linear => {
                 Box::new(LinearTree::new())
             },
+            TreeType::Binary => {
+                Box::new(BinaryTree::new())
+            }
             TreeType::Oct => {
                 let mut tree_bounds = BoundingBox::<T>::new(
                     Vec3::<T>::from_slice(self.bounds.get_p0().get_data()),
