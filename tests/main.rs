@@ -24,6 +24,22 @@ fn to_u8(f: f64) -> u8 {
     (f * 255.0) as u8
 }
 
+fn mix_images(image: &mut Image<f64>, delta: &Image<f64>, iteration: usize) {
+    assert_eq!(delta.height, image.height);
+    assert_eq!(delta.width, image.width);
+
+    let frac_delta = 1.0 / (iteration + 1) as f64;
+    let frac_image = 1.0 - frac_delta;
+    for j in 0..image.height {
+        for i in 0..image.width {
+            let index = j * image.width + i;
+            image.data[3 * index] = frac_image * image.data[3 * index] + frac_delta * delta.data[3 * index];
+            image.data[3 * index + 1] = frac_image * image.data[3 * index + 1] + frac_delta * delta.data[3 * index + 1];
+            image.data[3 * index + 2] = frac_image * image.data[3 * index + 2] + frac_delta * delta.data[3 * index + 2];
+        }
+    }
+}
+
 fn image_diff(reference: &Image<f64>, image: &Image<f64>) -> f64 {
     assert_eq!(reference.height, image.height);
     assert_eq!(reference.width, image.width);
@@ -253,7 +269,7 @@ fn random_scene() {
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let mul = 40;
+    let mul = 60;
     let width = 16 * mul;
     let height = 9 * mul;
     let aspect = width as f64 / height as f64;
@@ -278,9 +294,14 @@ fn random_scene() {
     let image = renderer.render(&mut scene, &camera);
     print_ppm(&image, "random_scene_preview.ppm");
 
-    let renderer = Renderer::new(width, height, 4, 8, false);
-    let image = renderer.render(&scene, &camera);
-    print_ppm(&image, "random_scene.ppm");
+    let mut image = Image::new(width, height);
+    let renderer = Renderer::new(width, height, 1, 8, false);
+    let sampling = 8;
+    for i in 0..sampling {
+        let delta = renderer.render(&scene, &camera);
+        mix_images(&mut image, &delta, i);
+        print_ppm(&image, "random_scene.ppm");
+    }
 }
 
 #[test]
