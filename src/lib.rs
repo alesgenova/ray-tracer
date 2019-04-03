@@ -8,7 +8,9 @@ pub mod scene;
 pub mod renderer;
 pub mod material;
 pub mod actor;
+pub mod boundingbox;
 
+pub mod tree;
 mod utils;
 
 #[cfg(test)]
