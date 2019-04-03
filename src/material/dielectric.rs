@@ -6,12 +6,24 @@ use crate::ray::Ray;
 use crate::hit::Hit;
 use crate::material::{Scatter, Material};
 use crate::utils::refract;
+use crate::texture::Texture;
 
 pub struct DielectricMaterial<T>
     where T: Float
 {
-    pub color: Vec3<T>,
-    pub n: T
+    texture: Box<dyn Texture<T>>,
+    n: T
+}
+
+impl<T> DielectricMaterial<T>
+    where T: Float
+{
+    pub fn new(texture: Box<Texture<T>>, n: T) -> Self {
+        DielectricMaterial {
+            texture,
+            n
+        }
+    }
 }
 
 impl<T> Material<T> for DielectricMaterial<T>
@@ -21,7 +33,8 @@ impl<T> Material<T> for DielectricMaterial<T>
         let mut outward_normal = &hit.normal * (-T::one());
         let mut n0 = self.n;
         let mut n1 = T::one();
-        let attenuation = Vec3::<T>::from_slice(self.color.get_data());
+        let color = self.texture.get_color(T::zero(), T::zero(), &hit.point);
+        let attenuation = Vec3::<T>::from_slice(color.get_data());
         let c = incident.get_direction().dot(&hit.normal);
 
         if c < T::zero() {
