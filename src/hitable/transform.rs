@@ -17,12 +17,23 @@ impl<T> Translation<T>
     where T: Float
 {
     pub fn new(wrapped: Box<dyn Hitable<T>>, translation: Vec3<T>) -> Self {
-        let bounds = Translation::compute_bounds(wrapped.get_bounds(), &translation);
-        Translation {
+        let mut translation = Translation {
             wrapped,
             translation,
-            bounds
-        }
+            bounds: BoundingBox::<T>::new(Vec3::<T>::new(), Vec3::<T>::new())
+        };
+        translation.update_bounds();
+        translation
+    }
+
+    fn update_bounds(&mut self) {
+        let bounds = self.wrapped.get_bounds();
+
+        let bounds = BoundingBox::new(
+            bounds.get_p0() + &self.translation,
+            bounds.get_p1() + &self.translation
+        );
+        self.bounds = bounds;
     }
 
     pub fn compute_bounds(bounds: &BoundingBox<T>, translation: &Vec3<T>) -> BoundingBox<T> {

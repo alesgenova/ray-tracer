@@ -6,6 +6,7 @@ use std::time::Instant;
 use ray_tracer::vector::Vec3;
 use ray_tracer::scene::Scene;
 use ray_tracer::hitable::sphere::Sphere;
+use ray_tracer::hitable::transform::Translation;
 use ray_tracer::camera::Camera;
 use ray_tracer::camera::perspective::PerspectiveCamera;
 use ray_tracer::renderer::Renderer;
@@ -92,28 +93,32 @@ fn basic_scene() {
     scene.set_background(Vec3::from_array([0.75, 0.75, 0.75]));
 
     let r = 1.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, r, -4.0]), r);
+    let sphere = Box::new(Sphere::<f64>::new(r));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, r, -4.0]));
     let texture = UniformTexture::new(Vec3::from_array([1.0, 0.2, 0.2]));
     let material = LambertianMaterial::<f64>::new(Box::new(texture), 0.5);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let r = 1.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([-r * 2.0, r, -4.0]), r);
+    let sphere = Box::new(Sphere::<f64>::new(r));
+    let sphere = Translation::new(sphere, Vec3::from_array([-r * 2.0, r, -4.0]));
     let texture = UniformTexture::new(Vec3::from_array([0.2, 1.0, 0.2]));
     let material = MetalMaterial::<f64>::new(Box::new(texture), 0.0);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let r = 1.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([r * 2.0, r, -4.0]), r);
+    let sphere = Box::new(Sphere::<f64>::new(r));
+    let sphere = Translation::new(sphere, Vec3::from_array([r * 2.0, r, -4.0]));
     let texture = UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0]));
     let material = DielectricMaterial::<f64>::new(Box::new(texture), 2.4);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
     let r = 0.25;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, r, -5.0]), r);
+    let sphere = Box::new(Sphere::<f64>::new(r));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, r, -5.0]));
     let texture = UniformTexture::new(Vec3::from_array([0.0, 0.0, 1.0]));
     let material = MetalMaterial::<f64>::new(Box::new(texture), 0.0);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
@@ -121,7 +126,8 @@ fn basic_scene() {
 
     // Sphere used as light
     let r = 5.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 2.0 *r, -2.0]), r);
+    let sphere = Box::new(Sphere::<f64>::new(r));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, 2.0 *r, -2.0]));
     let texture = UniformTexture::new(Vec3::from_array([1.0, 0.9, 0.9]));
     let material = PlainMaterial::<f64>::new(Box::new(texture));
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
@@ -129,7 +135,8 @@ fn basic_scene() {
 
     // Sphere used as floor
     let r = 500.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, -r, 0.0]), r);
+    let sphere = Box::new(Sphere::<f64>::new(r));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, -r, 0.0]));
     let texture0 = UniformTexture::new(Vec3::from_array([0.75, 0.0, 0.0]));
     let texture1 = UniformTexture::new(Vec3::from_array([0.0, 0.75, 0.0]));
     let mut texture2 = CheckerTexture::new(Box::new(texture0), Box::new(texture1));
@@ -205,7 +212,8 @@ fn random_scene() {
             let mut y = j as f64 + rng.gen::<f64>() * (1.0 - radius);
             y = MIN_Y + (MAX_Y - MIN_Y) * y / N_SPHERES_Y as f64;
 
-            let sphere = Sphere::<f64>::from(Vec3::from_array([x, y, radius]), radius);
+            let sphere = Box::new(Sphere::<f64>::new(radius));
+            let sphere = Translation::new(sphere, Vec3::from_array([x, y, radius]));
 
             let color = Vec3::from_array([rng.gen::<f64>(), rng.gen::<f64>(), rng.gen::<f64>()]);
             let texture = Box::new(UniformTexture::new(color));
@@ -226,21 +234,24 @@ fn random_scene() {
 
     // Three larger spheres in the center
     let radius = 2.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 0.0, radius]), radius);
-    let color = Vec3::from_array([1.0, 1.0, 1.0]);
+    let sphere = Box::new(Sphere::<f64>::new(radius));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, 0.0, radius]));
+    let color = Vec3::from_array([0.78, 1.0, 0.78]);
     let texture = Box::new(UniformTexture::new(color));
-    let material = DielectricMaterial::<f64>::new(texture, 2.4);
+    let material = DielectricMaterial::<f64>::new(texture, 2.0);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, - 2.0 * radius, radius]), radius);
+    let sphere = Box::new(Sphere::<f64>::new(radius));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, - 2.0 * radius, radius]));
     let color = Vec3::from_array([0.9, 0.9, 0.9]);
     let texture = Box::new(UniformTexture::new(color));
     let material = MetalMaterial::<f64>::new(texture, 0.0);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 2.0 * radius, radius]), radius);
+    let sphere = Box::new(Sphere::<f64>::new(radius));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, 2.0 * radius, radius]));
     let color = Vec3::from_array([1.0, 0.15, 0.15]);
     let texture = Box::new(UniformTexture::new(color));
     let material = MetalMaterial::<f64>::new(texture, 0.1);
@@ -249,7 +260,8 @@ fn random_scene() {
 
     // Sphere used as light
     let radius = 4.0;
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 1.0, 12.5]), radius);
+    let sphere = Box::new(Sphere::<f64>::new(radius));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, 1.0, 12.5]));
     let color = Vec3::from_array([1.0, 1.0, 1.0]);
     let texture = Box::new(UniformTexture::new(color));
     let material = PlainMaterial::<f64>::new(texture);
@@ -263,13 +275,14 @@ fn random_scene() {
     let texture0 = UniformTexture::new(color0);
     let texture1 = UniformTexture::new(color1);
     let texture = Box::new(CheckerTexture::new(Box::new(texture0), Box::new(texture1)));
-    // let texture = Box::new(UniformTexture::new(color));
-    let sphere = Sphere::<f64>::from(Vec3::from_array([0.0, 0.0, -radius]), radius);
+
+    let sphere = Box::new(Sphere::<f64>::new(radius));
+    let sphere = Translation::new(sphere, Vec3::from_array([0.0, 0.0, -radius]));
     let material = LambertianMaterial::<f64>::new(texture, 0.75);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let mul = 60;
+    let mul = 160;
     let width = 16 * mul;
     let height = 9 * mul;
     let aspect = width as f64 / height as f64;
@@ -288,15 +301,15 @@ fn random_scene() {
     let focus = (camera.get_lookat() - camera.get_position()).norm();
     camera.set_focus(focus);
 
-    let renderer = Renderer::new(width, height, 0, 0, false);
-
     scene.set_tree_type(TreeType::Oct);
+
+    let renderer = Renderer::new(width/4, height/4, 0, 2, false);
     let image = renderer.render(&mut scene, &camera);
     print_ppm(&image, "random_scene_preview.ppm");
 
     let mut image = Image::new(width, height);
-    let renderer = Renderer::new(width, height, 1, 8, false);
-    let sampling = 8;
+    let renderer = Renderer::new(width, height, 1, 16, false);
+    let sampling = 128;
     for i in 0..sampling {
         let delta = renderer.render(&scene, &camera);
         mix_images(&mut image, &delta, i);
@@ -338,7 +351,8 @@ fn tree() {
                 let mut z = k as f64 + rng.gen::<f64>() * (1.0 - radius);
                 z = MIN_Z + (MAX_Z - MIN_Z) * z / N_SPHERES_Z as f64;
 
-                let sphere = Sphere::<f64>::from(Vec3::from_array([x, y, z]), radius);
+                let sphere = Box::new(Sphere::<f64>::new(radius));
+                let sphere = Translation::new(sphere, Vec3::from_array([x, y, z]));
 
                 let color = Vec3::from_array([rng.gen::<f64>(), rng.gen::<f64>(), rng.gen::<f64>()]);
                 let texture = Box::new(UniformTexture::new(color));
