@@ -111,6 +111,10 @@ impl<T> Hitable<T> for Sphere<T>
     fn get_bounds(&self) -> &BoundingBox<T> {
         &self.bounds
     }
+
+    fn unwrap(self) -> Box<Hitable<T>> {
+        Box::new(self)
+    }
 }
 
 #[cfg(test)]
