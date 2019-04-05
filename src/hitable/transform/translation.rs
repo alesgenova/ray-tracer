@@ -62,7 +62,7 @@ impl<T> Hitable<T> for Translation<T>
         &self.bounds
     }
 
-    fn unwrap(self) -> Box<Hitable<T>> {
+    fn unwrap(self: Box<Self>) -> Box<dyn Hitable<T>> {
         self.wrapped
     }
 
@@ -134,12 +134,15 @@ mod tests {
     #[test]
     fn unwrap() {
         let hitable = Box::new(Sphere::new(2.0));
+        assert!(hitable.is_primitive());
         
         let translation = Vec3::from_array([1.0, 2.0, 3.0]);
         let hitable = Box::new(Translation::new(hitable, translation));
+        assert!(!hitable.is_primitive());
 
         let translation = Vec3::from_array([-1.0, -2.0, -3.0]);
         let hitable = Box::new(Translation::new(hitable, translation));
+        assert!(!hitable.is_primitive());
 
         {
             let bounds = hitable.get_bounds();
@@ -147,8 +150,10 @@ mod tests {
             assert_eq!(bounds.get_p1().get_data(), &[2.0, 2.0, 2.0]);
         }
 
-        assert!(!hitable.is_primitive());
         let hitable = hitable.unwrap();
         assert!(!hitable.is_primitive());
+
+        let hitable = hitable.unwrap();
+        assert!(hitable.is_primitive());
     }
 }

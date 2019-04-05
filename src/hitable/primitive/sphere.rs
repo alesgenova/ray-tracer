@@ -91,8 +91,8 @@ impl<T> Hitable<T> for Sphere<T>
         &self.bounds
     }
 
-    fn unwrap(self) -> Box<Hitable<T>> {
-        Box::new(self)
+    fn unwrap(self: Box<Self>) -> Box<dyn Hitable<T>> {
+        self
     }
 }
 
