@@ -85,4 +85,70 @@ mod tests {
         let hitable = Translation::new(hitable, translation);
         assert!(!hitable.is_primitive());
     }
+
+    #[test]
+    fn bounds() {
+        let hitable = Box::new(Sphere::new(2.0));
+        {
+            let bounds = hitable.get_bounds();
+            assert_eq!(bounds.get_p0().get_data(), &[-2.0, -2.0, -2.0]);
+            assert_eq!(bounds.get_p1().get_data(), &[2.0, 2.0, 2.0]);
+        }
+
+        let translation = Vec3::from_array([1.0, 2.0, 3.0]);
+        let hitable = Translation::new(hitable, translation);
+        {
+            let bounds = hitable.get_bounds();
+            assert_eq!(bounds.get_p0().get_data(), &[-1.0, 0.0, 1.0]);
+            assert_eq!(bounds.get_p1().get_data(), &[3.0, 4.0, 5.0]);
+        }
+    }
+
+    #[test]
+    fn hit() {
+        let origin = [3.0, 0.0, 10.0];
+        let direction = [0.0, 0.0, -1.0];
+        let ray = Ray::from_array(origin, direction);
+
+        let hitable = Box::new(Sphere::new(2.0));
+
+        if let Some(_) = hitable.hit(&ray, 0.0, 1000.0) {
+            assert!(false);
+        }
+
+        let translation = Vec3::from_array([3.0, 0.0, 2.0]);
+        let hitable = Translation::new(hitable, translation);
+
+        match hitable.hit(&ray, 0.0, 1000.0) {
+            Some(hit) => {
+                assert_eq!(hit.point.get_data(), &[3.0, 0.0, 4.0]);
+                assert_eq!(hit.normal.get_data(), &[0.0, 0.0, 1.0]);
+                assert_eq!(hit.t, 6.0);
+            },
+            None => {
+                assert!(false);
+            }
+        };
+    }
+
+    #[test]
+    fn unwrap() {
+        let hitable = Box::new(Sphere::new(2.0));
+        
+        let translation = Vec3::from_array([1.0, 2.0, 3.0]);
+        let hitable = Box::new(Translation::new(hitable, translation));
+
+        let translation = Vec3::from_array([-1.0, -2.0, -3.0]);
+        let hitable = Box::new(Translation::new(hitable, translation));
+
+        {
+            let bounds = hitable.get_bounds();
+            assert_eq!(bounds.get_p0().get_data(), &[-2.0, -2.0, -2.0]);
+            assert_eq!(bounds.get_p1().get_data(), &[2.0, 2.0, 2.0]);
+        }
+
+        assert!(!hitable.is_primitive());
+        let hitable = hitable.unwrap();
+        assert!(!hitable.is_primitive());
+    }
 }
