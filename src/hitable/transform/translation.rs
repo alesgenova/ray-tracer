@@ -65,4 +65,24 @@ impl<T> Hitable<T> for Translation<T>
     fn unwrap(self) -> Box<Hitable<T>> {
         self.wrapped
     }
+
+    fn is_primitive(&self) -> bool {
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::super::primitive::Sphere;
+
+    #[test]
+    fn init() {
+        let hitable = Box::new(Sphere::new(2.0));
+        assert!(hitable.is_primitive());
+
+        let translation = Vec3::from_array([1.0, 2.0, 3.0]);
+        let hitable = Translation::new(hitable, translation);
+        assert!(!hitable.is_primitive());
+    }
 }
