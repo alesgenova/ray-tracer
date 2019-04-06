@@ -2,6 +2,7 @@ use rand::prelude::*;
 
 use crate::float::Float;
 use crate::vector::Vec3;
+use crate::constants::Axis;
 
 pub fn random_point_in_sphere<T>(radius: T) -> Vec3<T>
     where T: Float
@@ -84,4 +85,12 @@ pub fn reflection_probability<T>(direction: &Vec3<T>, normal: &Vec3<T>, n: T) ->
     let mut pow5 = T::one() - cosine;
     pow5 = pow5 * pow5 * pow5 * pow5 * pow5;
     r0 + (T::one() - r0) * pow5
+}
+
+pub fn axis_to_index(axis: &Axis) -> usize {
+    match axis {
+        Axis::X => 0,
+        Axis::Y => 1,
+        Axis::Z => 2
+    }
 }

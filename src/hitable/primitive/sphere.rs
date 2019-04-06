@@ -8,7 +8,6 @@ use crate::boundingbox::BoundingBox;
 pub struct Sphere<T>
     where T: Float
 {
-    center: Vec3<T>,
     radius: T,
     bounds: BoundingBox<T>
 }
@@ -16,33 +15,13 @@ pub struct Sphere<T>
 impl<T> Sphere<T>
     where T: Float
 {
-    pub fn new() -> Self {
+    pub fn new(radius: T) -> Self {
         let mut sphere = Sphere {
-            center: Vec3::<T>::new(),
-            radius: T::one(),
-            bounds: BoundingBox::<T>::new(Vec3::<T>::new(), Vec3::<T>::new())
-        };
-        sphere.update_bounds();
-        sphere
-    }
-
-    pub fn from(center: Vec3<T>, radius: T) -> Self {
-        let mut sphere = Sphere {
-            center,
             radius,
             bounds: BoundingBox::<T>::new(Vec3::<T>::new(), Vec3::<T>::new())
         };
         sphere.update_bounds();
         sphere
-    }
-
-    pub fn get_center(&self) -> &Vec3<T> {
-        &self.center
-    }
-
-    pub fn set_center(&mut self, center: &[T]) {
-        self.center.set_data(center);
-        self.update_bounds();
     }
 
     pub fn get_radius(&self) -> T {
@@ -56,8 +35,8 @@ impl<T> Sphere<T>
 
     fn update_bounds(&mut self) {
         let one = Vec3::<T>::from_array([T::one(), T::one(), T::one()]);
-        let p0 = self.get_center() - &one * self.get_radius();
-        let p1 = self.get_center() + &one * self.get_radius();
+        let p0 = &one * self.get_radius() * (- T::one());
+        let p1 = &one * self.get_radius();
         self.bounds = BoundingBox::<T>::new(p0, p1);
     }
 }
@@ -82,7 +61,7 @@ impl<T> Hitable<T> for Sphere<T>
         // t = (- b +/- sqrt(b * b - 4 * a * c)) / (2 * a)
         // 
         // drop 2s coming from b
-        let oc = ray.get_origin() - self.get_center();
+        let oc = ray.get_origin();
         let a = ray.get_direction().dot(ray.get_direction());
         let b = ray.get_direction().dot(&oc);
         let c = oc.dot(&oc) - self.get_radius() * self.get_radius();
@@ -98,7 +77,7 @@ impl<T> Hitable<T> for Sphere<T>
                 else { return None; };
 
         let point = ray.get_point(t);
-        let normal = (&point - self.get_center()) / self.get_radius();
+        let normal = (&point) / self.get_radius();
         let hit = Hit {
             point,
             normal,
@@ -111,6 +90,10 @@ impl<T> Hitable<T> for Sphere<T>
     fn get_bounds(&self) -> &BoundingBox<T> {
         &self.bounds
     }
+
+    fn unwrap(self: Box<Self>) -> Box<dyn Hitable<T>> {
+        self
+    }
 }
 
 #[cfg(test)]
@@ -119,50 +102,43 @@ mod tests {
 
     #[test]
     fn init() {
-        let sphere = Sphere::<f64>::new();
-        assert_eq!(sphere.get_center().get_data(), [0.0, 0.0, 0.0]);
+        let sphere = Sphere::<f64>::new(1.0);
         assert_eq!(sphere.get_radius(), 1.0);
 
-        let center = Vec3::from_array([10.0, 20.0, 30.0]);
         let radius = 5.5;
-        let sphere = Sphere::<f64>::from(center, radius);
-        assert_eq!(sphere.get_center().get_data(), [10.0, 20.0, 30.0]);
+        let sphere = Sphere::<f64>::new(radius);
         assert_eq!(sphere.get_radius(), 5.5);
     }
 
     #[test]
     fn set() {
-        let mut sphere = Sphere::<f64>::new();
-        let center = [10.0, 20.0, 30.0];
+        let mut sphere = Sphere::<f64>::new(1.0);
         let radius = 5.5;
-        sphere.set_center(&center);
         sphere.set_radius(radius);
-        assert_eq!(sphere.get_center().get_data(), [10.0, 20.0, 30.0]);
         assert_eq!(sphere.get_radius(), 5.5);
     }
 
     #[test]
     fn hit() {
-        let center = Vec3::from_array([10.0, 0.0, 0.0]);
         let radius = 2.0;
-        let sphere = Sphere::<f64>::from(center, radius);
+        let sphere = Sphere::<f64>::new(radius);
 
-        let origin = [-1.0, 0.0, 0.0];
+        let origin = [-8.0, 0.0, 0.0];
         let direction = [2.0, 0.0, 0.0];
         let ray = Ray::from_array(origin, direction);
         let hit = sphere.hit(&ray, 0.0, 100.0);
         match hit {
             Some(hit) => {
-                assert_eq!(hit.point.get_data(), [8.0, 0.0, 0.0]);
+                assert_eq!(hit.point.get_data(), [-2.0, 0.0, 0.0]);
                 assert_eq!(hit.normal.get_data(), [-1.0, 0.0, 0.0]);
-                assert_eq!(hit.t, 4.5);
+                assert_eq!(hit.t, 3.0);
             },
             None => {
                 assert!(false);
             }
         }
 
-        let origin = [-1.0, 2.1, 0.0];
+        let origin = [-8.0, 2.1, 0.0];
         let direction = [2.0, 0.0, 0.0];
         let ray = Ray::from_array(origin, direction);
         let hit = sphere.hit(&ray, 0.0, 100.0);
@@ -173,7 +149,7 @@ mod tests {
             None => {}
         }
 
-        let origin = [-1.0, 2.1, 0.0];
+        let origin = [-8.0, 0.0, 0.0];
         let direction = [0.0, 2.0, 0.0];
         let ray = Ray::from_array(origin, direction);
         let hit = sphere.hit(&ray, 0.0, 100.0);
@@ -187,11 +163,10 @@ mod tests {
 
     #[test]
     fn bounds() {
-        let center = Vec3::from_array([1.0, 2.0, 3.0]);
         let radius = 2.5;
-        let sphere = Sphere::<f64>::from(center, radius);
+        let sphere = Sphere::<f64>::new(radius);
         let bounds = sphere.get_bounds();
-        assert_eq!(bounds.get_p0().get_data(), [-1.5, -0.5, 0.5]);
-        assert_eq!(bounds.get_p1().get_data(), [3.5, 4.5, 5.5]);
+        assert_eq!(bounds.get_p0().get_data(), [-2.5, -2.5, -2.5]);
+        assert_eq!(bounds.get_p1().get_data(), [2.5, 2.5, 2.5]);
     }
 }
