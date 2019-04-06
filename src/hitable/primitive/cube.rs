@@ -5,6 +5,7 @@ use crate::hit::Hit;
 use crate::hitable::Hitable;
 use crate::hitable::primitive::Rectangle;
 use crate::hitable::transform::Translation;
+use crate::hitable::primitive::Group;
 use crate::boundingbox::BoundingBox;
 use crate::constants::Axis;
 use crate::utils::axis_to_index;
@@ -15,8 +16,7 @@ pub struct Cube<T>
     length: T,
     width: T,
     height: T,
-    faces: Vec<Box<Hitable<T>>>,
-    bounds: BoundingBox<T>
+    faces: Group<T>
 }
 
 impl<T> Cube<T>
@@ -42,7 +42,7 @@ impl<T> Cube<T>
         ];
 
         let half = T::from(0.5).unwrap();
-        let mut faces = vec!();
+        let mut faces = Group::<T>::new();
 
         for i in 0..6 {
             let (width, height, depth) = lengths[i];
@@ -50,20 +50,14 @@ impl<T> Cube<T>
             let face = Box::new(Rectangle::<T>::new(width, width_axis, height, height_axis));
             let translation = face.get_normal() * depth * half;
             let face : Box<Hitable<T>> = Box::new(Translation::new(face, translation));
-            faces.push(face);
+            faces.add_hitable(face);
         };
-
-        let bounds = BoundingBox::<T>::new(
-            Vec3::from_array([- length * half, - width * half, - height * half]),
-            Vec3::from_array([length * half, width * half, height * half]),
-        );
 
         Cube {
             length,
             width,
             height,
-            faces,
-            bounds
+            faces
         }
     }
 }
@@ -72,20 +66,11 @@ impl<T> Hitable<T> for Cube<T>
     where T: Float
 {
     fn hit(&self, ray: &Ray<T>, t_min: T, t_max: T) -> Option<Hit<T>> {
-        let mut t_max = t_max;
-        let mut result : Option<Hit<T>> = None;
-
-        for i in 0..self.faces.len() {
-            if let Some(hit) = self.faces[i].hit(ray, t_min, t_max) {
-                t_max = hit.t;
-                result = Some(hit);
-            }
-        }
-        result
+        self.faces.hit(ray, t_min, t_max)
     }
 
     fn get_bounds(&self) -> &BoundingBox<T> {
-        &self.bounds
+        self.faces.get_bounds()
     }
 
     fn unwrap(self: Box<Self>) -> Box<dyn Hitable<T>> {
