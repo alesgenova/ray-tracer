@@ -5,7 +5,8 @@ use std::time::Instant;
 
 use ray_tracer::vector::Vec3;
 use ray_tracer::scene::Scene;
-use ray_tracer::hitable::sphere::Sphere;
+use ray_tracer::hitable::primitive::Sphere;
+use ray_tracer::hitable::primitive::Rectangle;
 use ray_tracer::hitable::transform::Translation;
 use ray_tracer::camera::Camera;
 use ray_tracer::camera::perspective::PerspectiveCamera;
@@ -20,6 +21,11 @@ use ray_tracer::actor::Actor;
 use ray_tracer::tree::TreeType;
 use ray_tracer::texture::uniform::UniformTexture;
 use ray_tracer::texture::checker::CheckerTexture;
+use ray_tracer::constants::Axis;
+
+const MULT : usize = 40;
+const SAMPLING : usize = 4;
+const REFLECTIONS : usize = 8;
 
 fn to_u8(f: f64) -> u8 {
     (f * 255.0) as u8
@@ -87,9 +93,114 @@ fn print_ppm(image: &Image<f64>, filename: &str) {
 }
 
 #[test]
-fn basic_scene() {
+fn rectangle_room() {
     let mut scene = Scene::<f64>::new();
     // scene.set_background(Vec3::from_array([0.2, 0.2, 0.7]));
+
+    let room_size = 15.0;
+    let light_size = 2.0 * room_size / 3.0;
+
+    // Rectangle used as floor
+    let width_axis = Axis::X;
+    let height_axis = Axis::Y;
+    let hitable = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, -room_size / 2.0])));
+    let texture0 = Box::new(UniformTexture::new(Vec3::from_array([0.9, 0.9, 0.9])));
+    let texture1 = Box::new(UniformTexture::new(Vec3::from_array([0.75, 0.75, 0.75])));
+    let texture = Box::new(CheckerTexture::new(texture0, texture1));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let actor = Actor::<f64> { hitable, material};
+    scene.add_actor(actor);
+
+    // Rectangle used as front wall
+    let width_axis = Axis::X;
+    let height_axis = Axis::Z;
+    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, room_size / 2.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.0, 1.0, 0.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let actor = Actor::<f64> { hitable: rectangle, material};
+    scene.add_actor(actor);
+
+    // Rectangle used as back wall
+    let width_axis = Axis::Z;
+    let height_axis = Axis::X;
+    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, - room_size / 2.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.9, 0.9, 0.9])));
+    let material = Box::new(MetalMaterial::<f64>::new(texture, 0.0));
+    let actor = Actor::<f64> { hitable: rectangle, material};
+    scene.add_actor(actor);
+
+    // Rectangle used as left wall
+    let width_axis = Axis::Y;
+    let height_axis = Axis::Z;
+    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([-room_size / 2.0, 0.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 0.0, 0.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let actor = Actor::<f64> { hitable: rectangle, material};
+    scene.add_actor(actor);
+
+    // Rectangle used as right wall
+    let width_axis = Axis::Z;
+    let height_axis = Axis::Y;
+    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([room_size / 2.0, 0.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.0, 0.0, 1.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let actor = Actor::<f64> { hitable: rectangle, material};
+    scene.add_actor(actor);
+
+    // Rectangle used as ceiling
+    let width_axis = Axis::Y;
+    let height_axis = Axis::X;
+    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, 0.0, room_size / 2.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 0.0, 1.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let actor = Actor::<f64> { hitable: rectangle, material};
+    scene.add_actor(actor);
+
+    // Rectangle used as light
+    let width_axis = Axis::X;
+    let height_axis = Axis::Y;
+    let hitable = Box::new(Rectangle::new(light_size, width_axis, light_size, height_axis));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, room_size / 2.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([2.0, 2.0, 2.0])));
+    let material = Box::new(PlainMaterial::<f64>::new(texture));
+    let actor = Actor::<f64> { hitable, material};
+    scene.add_actor(actor);
+
+    let mul = 40;
+    let width = 12 * mul;
+    let height = 8 * mul;
+    let aspect = width as f64 / height as f64;
+    let mut camera = PerspectiveCamera::<f64>::new();
+    camera.set_aspect(aspect);
+    camera.set_fov(0.35 * std::f64::consts::PI);
+    camera.set_position(&[0.0, - 0.5 * room_size, 0.0]);
+    camera.set_direction(&[0.0, 1.0, 0.0]);
+    // camera.set_lookat(&[0.0, 0.0, 0.0]);
+    camera.set_up(&[0.0, 0.0, 1.0]);
+    camera.set_fov(0.4 * std::f64::consts::PI);
+    camera.set_focus(1.0);
+
+    scene.set_tree_type(TreeType::Oct);
+
+    let renderer = Renderer::new(width, height, 0, 0, false);
+    let image = renderer.render(&mut scene, &camera);
+    print_ppm(&image, "basic_scene_preview.ppm");
+
+    let renderer = Renderer::new(width, height, 32, 8, false);
+    let image = renderer.render(&mut scene, &camera);
+    print_ppm(&image, "basic_scene.ppm");
+}
+
+#[test]
+fn basic_scene() {
+    let mut scene = Scene::<f64>::new();
+    scene.set_background(Vec3::from_array([0.2, 0.2, 0.7]));
     scene.set_background(Vec3::from_array([0.75, 0.75, 0.75]));
 
     let r = 1.0;
@@ -100,78 +211,6 @@ fn basic_scene() {
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    let r = 1.0;
-    let sphere = Box::new(Sphere::<f64>::new(r));
-    let sphere = Translation::new(sphere, Vec3::from_array([-r * 2.0, r, -4.0]));
-    let texture = UniformTexture::new(Vec3::from_array([0.2, 1.0, 0.2]));
-    let material = MetalMaterial::<f64>::new(Box::new(texture), 0.0);
-    let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
-    scene.add_actor(actor);
-
-    let r = 1.0;
-    let sphere = Box::new(Sphere::<f64>::new(r));
-    let sphere = Translation::new(sphere, Vec3::from_array([r * 2.0, r, -4.0]));
-    let texture = UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0]));
-    let material = DielectricMaterial::<f64>::new(Box::new(texture), 2.4);
-    let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
-    scene.add_actor(actor);
-
-    let r = 0.25;
-    let sphere = Box::new(Sphere::<f64>::new(r));
-    let sphere = Translation::new(sphere, Vec3::from_array([0.0, r, -5.0]));
-    let texture = UniformTexture::new(Vec3::from_array([0.0, 0.0, 1.0]));
-    let material = MetalMaterial::<f64>::new(Box::new(texture), 0.0);
-    let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
-    scene.add_actor(actor);
-
-    // Sphere used as light
-    let r = 5.0;
-    let sphere = Box::new(Sphere::<f64>::new(r));
-    let sphere = Translation::new(sphere, Vec3::from_array([0.0, 2.0 *r, -2.0]));
-    let texture = UniformTexture::new(Vec3::from_array([1.0, 0.9, 0.9]));
-    let material = PlainMaterial::<f64>::new(Box::new(texture));
-    let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
-    scene.add_actor(actor);
-
-    // Sphere used as floor
-    let r = 500.0;
-    let sphere = Box::new(Sphere::<f64>::new(r));
-    let sphere = Translation::new(sphere, Vec3::from_array([0.0, -r, 0.0]));
-    let texture0 = UniformTexture::new(Vec3::from_array([0.75, 0.0, 0.0]));
-    let texture1 = UniformTexture::new(Vec3::from_array([0.0, 0.75, 0.0]));
-    let mut texture2 = CheckerTexture::new(Box::new(texture0), Box::new(texture1));
-    texture2.set_period(Vec3::from_array([0.5, 0.5, 0.5]));
-    let texture3 = UniformTexture::new(Vec3::from_array([0.0, 0.0, 0.75]));
-    let texture = CheckerTexture::new(Box::new(texture2), Box::new(texture3));
-    let material = LambertianMaterial::<f64>::new(Box::new(texture), 0.5);
-    let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
-    scene.add_actor(actor);
-
-    let mul = 40;
-    let width = 12 * mul;
-    let height = 8 * mul;
-    let aspect = width as f64 / height as f64;
-    let mut camera = PerspectiveCamera::<f64>::new();
-    camera.set_aspect(aspect);
-    camera.set_fov(0.5 * std::f64::consts::PI);
-    camera.set_position(&[0.0, 2.0, 0.0]);
-    camera.set_direction(&[0.0, -0.125, -1.0]);
-
-    camera.set_position(&[4.0, 2.0, -1.0]);
-    camera.set_lookat(&[0.0, 1.0, -4.0]);
-    // camera.set_aperture(0.25);
-    let focus = (camera.get_lookat() - camera.get_position()).norm();
-    camera.set_focus(focus);
-
-    scene.set_tree_type(TreeType::Oct);
-
-    let renderer = Renderer::new(width, height, 0, 0, false);
-    let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "basic_scene_preview.ppm");
-
-    let renderer = Renderer::new(width, height, 4, 8, false);
-    let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "basic_scene.ppm");
 }
 
 #[test]
@@ -385,7 +424,7 @@ fn tree() {
     let now = Instant::now();
     let image_linear = renderer.render(&scene, &camera);
     let t_linear = now.elapsed().as_millis();
-    // println!("Linear: {}", t_linear);
+    println!("Linear: {}", t_linear);
 
     scene.set_tree_type(TreeType::Binary);
     let now = Instant::now();
@@ -394,7 +433,7 @@ fn tree() {
     let diff = image_diff(&image_linear, &image_binary);
     assert!(t_binary < t_linear);
     assert_eq!(diff, 0.0);
-    // println!("Binary -  t: {}  diff: {}", t_binary, diff);
+    println!("Binary -  t: {}  diff: {}", t_binary, diff);
 
     scene.set_tree_type(TreeType::Oct);
     let now = Instant::now();
@@ -403,5 +442,7 @@ fn tree() {
     let diff = image_diff(&image_linear, &image_oct);
     assert!(t_oct < t_linear);
     assert_eq!(diff, 0.0);
-    // println!("Oct -  t: {}  diff: {}", t_oct, diff);
+    println!("Oct -  t: {}  diff: {}", t_oct, diff);
+
+    assert!(false);
 }
