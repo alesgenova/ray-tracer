@@ -45,6 +45,10 @@ impl<T> Rectangle<T>
         }
     }
 
+    pub fn get_normal(&self) -> &Vec3<T> {
+        &self.normal
+    }
+
     fn length_to_point(length: T, axis: &Axis) -> Vec3<T> {
         match axis {
             Axis::X => Vec3::<T>::from_array([length, T::zero(), T::zero()]),

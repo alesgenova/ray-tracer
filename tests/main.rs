@@ -7,6 +7,7 @@ use ray_tracer::vector::Vec3;
 use ray_tracer::scene::Scene;
 use ray_tracer::hitable::primitive::Sphere;
 use ray_tracer::hitable::primitive::Rectangle;
+use ray_tracer::hitable::primitive::Cube;
 use ray_tracer::hitable::transform::Translation;
 use ray_tracer::camera::Camera;
 use ray_tracer::camera::perspective::PerspectiveCamera;
@@ -190,11 +191,77 @@ fn rectangle_room() {
 
     let renderer = Renderer::new(width, height, 0, 0, false);
     let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "basic_scene_preview.ppm");
+    print_ppm(&image, "rectangle_room_preview.ppm");
 
     let renderer = Renderer::new(width, height, 32, 8, false);
     let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "basic_scene.ppm");
+    print_ppm(&image, "rectangle_room.ppm");
+}
+
+#[test]
+fn cube_scene() {
+    let mut scene = Scene::<f64>::new();
+    scene.set_background(Vec3::from_array([0.2, 0.2, 0.7]));
+
+    let room_size = 15.0;
+    let light_size = 2.0 * room_size / 3.0;
+
+    // Rectangle used as floor
+    let width_axis = Axis::X;
+    let height_axis = Axis::Y;
+    let hitable = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, -room_size / 2.0])));
+    let texture0 = Box::new(UniformTexture::new(Vec3::from_array([0.9, 0.9, 0.9])));
+    let texture1 = Box::new(UniformTexture::new(Vec3::from_array([0.75, 0.75, 0.75])));
+    let texture = Box::new(CheckerTexture::new(texture0, texture1));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let actor = Actor::<f64> { hitable, material};
+    scene.add_actor(actor);
+
+    // Box on the floor
+    let length = 6.0;
+    let width = 3.0;
+    let heigth = 5.0;
+    let hitable = Box::new(Cube::new(length, width, heigth));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([4.0, room_size / 3.0, -room_size / 2.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.0, 1.0, 0.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let actor = Actor::<f64> { hitable, material};
+    scene.add_actor(actor);
+
+    // Rectangle used as light
+    let width_axis = Axis::X;
+    let height_axis = Axis::Y;
+    let hitable = Box::new(Rectangle::new(light_size, width_axis, light_size, height_axis));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, room_size / 2.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([2.0, 2.0, 2.0])));
+    let material = Box::new(PlainMaterial::<f64>::new(texture));
+    let actor = Actor::<f64> { hitable, material};
+    scene.add_actor(actor);
+
+    let mul = 40;
+    let width = 12 * mul;
+    let height = 8 * mul;
+    let aspect = width as f64 / height as f64;
+    let mut camera = PerspectiveCamera::<f64>::new();
+    camera.set_aspect(aspect);
+    camera.set_fov(0.35 * std::f64::consts::PI);
+    camera.set_position(&[0.0, - 0.5 * room_size, 0.0]);
+    camera.set_direction(&[0.0, 1.0, 0.0]);
+    // camera.set_lookat(&[0.0, 0.0, 0.0]);
+    camera.set_up(&[0.0, 0.0, 1.0]);
+    camera.set_fov(0.4 * std::f64::consts::PI);
+    camera.set_focus(1.0);
+
+    scene.set_tree_type(TreeType::Oct);
+
+    let renderer = Renderer::new(width, height, 0, 0, false);
+    let image = renderer.render(&mut scene, &camera);
+    print_ppm(&image, "cube_scene_preview.ppm");
+
+    let renderer = Renderer::new(width, height, 32, 8, false);
+    let image = renderer.render(&mut scene, &camera);
+    print_ppm(&image, "cube_scene.ppm");
 }
 
 #[test]
