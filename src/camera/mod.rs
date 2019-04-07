@@ -30,5 +30,11 @@ pub trait Camera<T>
     fn get_focus(&self) -> T;
     fn set_focus(&mut self, focus: T);
 
+    fn get_aspect(&self) -> T;
+    fn set_aspect(&mut self, aspect: T);
+
+    fn get_fov(&self) -> T;
+    fn set_fov(&mut self, fov: T);
+
     fn get_ray(&self, r: T, s: T) -> Ray<T>;
 }

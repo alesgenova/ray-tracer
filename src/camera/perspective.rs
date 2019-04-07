@@ -49,24 +49,6 @@ impl<T> PerspectiveCamera<T>
         camera
     }
 
-    pub fn get_aspect(&self) -> T {
-        self.aspect
-    }
-
-    pub fn set_aspect(&mut self, aspect: T) {
-        self.aspect = aspect;
-        self.update();
-    }
-
-    pub fn get_fov(&self) -> T {
-        self.fov
-    }
-
-    pub fn set_fov(&mut self, fov: T) {
-        self.fov = fov;
-        self.update();
-    }
-
     pub fn update(&mut self) {
         let direction = match self.lock {
             CameraLock::Direction => {
@@ -143,6 +125,24 @@ impl<T> Camera<T> for PerspectiveCamera<T>
 
     fn set_focus(&mut self, focus: T) {
         self.focus = focus;
+        self.update();
+    }
+
+    fn get_aspect(&self) -> T {
+        self.aspect
+    }
+
+    fn set_aspect(&mut self, aspect: T) {
+        self.aspect = aspect;
+        self.update();
+    }
+
+    fn get_fov(&self) -> T {
+        self.fov
+    }
+
+    fn set_fov(&mut self, fov: T) {
+        self.fov = fov;
         self.update();
     }
 
