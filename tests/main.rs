@@ -5,6 +5,7 @@ use std::time::Instant;
 
 use ray_tracer::vector::Vec3;
 use ray_tracer::scene::Scene;
+use ray_tracer::hitable::Hitable;
 use ray_tracer::hitable::primitive::Sphere;
 use ray_tracer::hitable::primitive::Rectangle;
 use ray_tracer::hitable::primitive::Cube;
@@ -65,7 +66,7 @@ fn image_diff(reference: &Image<f64>, image: &Image<f64>) -> f64 {
     diff
 }
 
-fn print_ppm(image: &Image<f64>, filename: &str) {
+fn print_ppm(image: &Image<f64>, gamma: f64, filename: &str) {
     let mut file = OpenOptions::new()
         .write(true)
         .append(false)
@@ -82,9 +83,9 @@ fn print_ppm(image: &Image<f64>, filename: &str) {
             let index = j * image.width + i;
             if let Err(e) = writeln!(
                 file, "{} {} {}",
-                to_u8(image.data[3 * index]),
-                to_u8(image.data[3 * index + 1]),
-                to_u8(image.data[3 * index + 2])
+                to_u8(image.data[3 * index].powf(1.0 / gamma)),
+                to_u8(image.data[3 * index + 1].powf(1.0 / gamma)),
+                to_u8(image.data[3 * index + 2].powf(1.0 / gamma))
             ) {
                 eprintln!("Couldn't write to file: {}", e);
             }
@@ -92,17 +93,18 @@ fn print_ppm(image: &Image<f64>, filename: &str) {
     }
 }
 
-fn create_rectangle_room(room_size: f64) -> Vec<Actor<f64>> {
-    let light_size = 2.0 * room_size / 3.0;
-
+fn create_rectangle_room(length: f64, width: f64, height: f64, light: f64) -> Vec<Actor<f64>> {
     let mut actors = vec![];
+
+    let dimming = 1.0;
 
     // Rectangle used as light
     let width_axis = Axis::X;
     let height_axis = Axis::Y;
-    let hitable = Box::new(Rectangle::new(light_size, width_axis, light_size, height_axis));
-    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, room_size / 2.0])));
-    let texture = Box::new(UniformTexture::new(Vec3::from_array([2.0, 2.0, 2.0])));
+    // let hitable = Box::new(Rectangle::new(light, width_axis, light, height_axis));
+    let hitable = Box::new(Cube::new(light, light, 0.125 * light));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, width / 4.0, height / 2.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
     let material = Box::new(PlainMaterial::<f64>::new(texture));
     let actor = Actor::<f64> { hitable, material};
     actors.push(actor);
@@ -110,62 +112,63 @@ fn create_rectangle_room(room_size: f64) -> Vec<Actor<f64>> {
     // Rectangle used as floor
     let width_axis = Axis::X;
     let height_axis = Axis::Y;
-    let hitable = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
-    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, -room_size / 2.0])));
-    let texture0 = Box::new(UniformTexture::new(Vec3::from_array([0.9, 0.9, 0.9])));
-    let texture1 = Box::new(UniformTexture::new(Vec3::from_array([0.75, 0.75, 0.75])));
-    let texture = Box::new(CheckerTexture::new(texture0, texture1));
-    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let hitable = Box::new(Rectangle::new(length, width_axis, width, height_axis));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, -height / 2.0])));
+    let texture0 = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
+    let texture1 = Box::new(UniformTexture::new(Vec3::from_array([0.8, 0.8, 0.8])));
+    let mut texture = Box::new(CheckerTexture::new(texture0, texture1));
+    texture.set_period(Vec3::from_array([length / 8.0, length / 8.0, 1.0]));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, dimming));
     let actor = Actor::<f64> { hitable, material};
     actors.push(actor);
 
     // Rectangle used as front wall
     let width_axis = Axis::X;
     let height_axis = Axis::Z;
-    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
-    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, room_size / 2.0, 0.0])));
-    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.0, 1.0, 0.0])));
-    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let rectangle = Box::new(Rectangle::new(length, width_axis, height, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, width / 2.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, dimming));
     let actor = Actor::<f64> { hitable: rectangle, material};
     actors.push(actor);
 
     // Rectangle used as back wall
     let width_axis = Axis::Z;
     let height_axis = Axis::X;
-    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
-    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, - room_size / 2.0, 0.0])));
-    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.9, 0.9, 0.9])));
-    let material = Box::new(MetalMaterial::<f64>::new(texture, 0.0));
+    let rectangle = Box::new(Rectangle::new(height, width_axis, length, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, - width / 2.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, dimming));
     let actor = Actor::<f64> { hitable: rectangle, material};
-    actors.push(actor);
+    // actors.push(actor);
 
     // Rectangle used as left wall
     let width_axis = Axis::Y;
     let height_axis = Axis::Z;
-    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
-    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([-room_size / 2.0, 0.0, 0.0])));
-    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 0.0, 0.0])));
-    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let rectangle = Box::new(Rectangle::new(width, width_axis, height, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([-length / 2.0, 0.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.1, 1.0, 0.1])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, dimming));
     let actor = Actor::<f64> { hitable: rectangle, material};
     actors.push(actor);
 
     // Rectangle used as right wall
     let width_axis = Axis::Z;
     let height_axis = Axis::Y;
-    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
-    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([room_size / 2.0, 0.0, 0.0])));
-    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.0, 0.0, 1.0])));
-    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let rectangle = Box::new(Rectangle::new(height, width_axis, width, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([length / 2.0, 0.0, 0.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 0.1, 0.1])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, dimming));
     let actor = Actor::<f64> { hitable: rectangle, material};
     actors.push(actor);
 
     // Rectangle used as ceiling
     let width_axis = Axis::Y;
     let height_axis = Axis::X;
-    let rectangle = Box::new(Rectangle::new(room_size, width_axis, room_size, height_axis));
-    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, 0.0, room_size / 2.0])));
-    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 0.0, 1.0])));
-    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.65));
+    let rectangle = Box::new(Rectangle::new(width, width_axis, length, height_axis));
+    let rectangle = Box::new(Translation::new(rectangle, Vec3::from_array([0.0, 0.0, height / 2.0])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, dimming));
     let actor = Actor::<f64> { hitable: rectangle, material};
     actors.push(actor);
 
@@ -198,18 +201,20 @@ fn create_cube_box(length: f64, width: f64, height: f64, thickness: f64) -> Box<
     // cube used as back wall
     let hitable = Box::new(Cube::new(length, thickness, height));
     let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, width / 2.0, 0.0])));
-    group.add_hitable(hitable);
+    // group.add_hitable(hitable);
 
     group
 }
 
 #[test]
 fn rectangle_room() {
-    let room_size = 15.0;
-    let mut actors = create_rectangle_room(room_size);
+    let room_length = 16.0;
+    let room_width = 16.0;
+    let room_height = 9.0;
+    let mut actors = create_rectangle_room(room_length, room_width, room_height, 6.5);
 
     let mut scene = Scene::<f64>::new();
-    // scene.set_background(Vec3::from_array([0.2, 0.2, 0.7]));
+    // scene.set_background(Vec3::from_array([0.1, 0.1, 0.1]));
 
     loop {
         let actor = actors.pop();
@@ -223,29 +228,89 @@ fn rectangle_room() {
         }
     };
 
-    let mul = 40;
+    let box_size = 4.0;
+    let box_thickness = 0.05 * box_size;
+    let hitable = create_cube_box(box_size, box_size, box_size, box_thickness);
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([- 0.3 * room_length, 0.3 * room_width, - 0.5 * room_height + 0.5 * box_size])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.2, 0.2, 1.0])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 1.0));
+    let actor = Actor {hitable, material};
+    scene.add_actor(actor);
+
+    // cube used as front glass wall
+    let hitable = Box::new(Cube::new(box_size, box_thickness, box_size));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, - box_size / 2.0, 0.0])));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([- 0.3 * room_length, 0.3 * room_width, - 0.5 * room_height + 0.5 * box_size])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
+    let material = Box::new(DielectricMaterial::<f64>::new(texture, 1.6));
+    let actor = Actor {hitable, material};
+    scene.add_actor(actor);
+
+    // cube used as back glass wall
+    let hitable = Box::new(Cube::new(box_size, box_thickness, box_size));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, box_size / 2.0, 0.0])));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([- 0.3 * room_length, 0.3 * room_width, - 0.5 * room_height + 0.5 * box_size])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
+    let material = Box::new(DielectricMaterial::<f64>::new(texture, 1.6));
+    let actor = Actor {hitable, material};
+    scene.add_actor(actor);
+
+    let sphere_size = 1.0;
+    let hitable = Box::new(Sphere::new(sphere_size));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([- 0.3 * room_length, 0.3 * room_width, - 0.5 * room_height + 0.5 * box_size])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 0.2, 0.2])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 1.0));
+    let actor = Actor {hitable, material};
+    scene.add_actor(actor);
+
+    // Large glass sphere in the front
+    let sphere_size = 3.0;
+    let hitable = Box::new(Sphere::new(sphere_size));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.1 * room_width, - 0.5 * room_height + sphere_size])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([1.0, 1.0, 1.0])));
+    let material = Box::new(DielectricMaterial::<f64>::new(texture, 2.4));
+    let actor = Actor {hitable, material};
+    scene.add_actor(actor);
+
+    // Large metal sphere in the front;
+    let sphere_size = 2.0;
+    let hitable = Box::new(Sphere::new(sphere_size));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.3 * room_length, 0.3 * room_width, - 0.5 * room_height + sphere_size])));
+    let texture = Box::new(UniformTexture::new(Vec3::from_array([0.9, 0.9, 0.9])));
+    let material = Box::new(MetalMaterial::<f64>::new(texture, 0.0));
+    let actor = Actor {hitable, material};
+    scene.add_actor(actor);
+
+    let mul = 120;
     let width = 12 * mul;
     let height = 8 * mul;
     let aspect = width as f64 / height as f64;
     let mut camera = PerspectiveCamera::<f64>::new();
     camera.set_aspect(aspect);
-    camera.set_fov(0.35 * std::f64::consts::PI);
-    camera.set_position(&[0.0, - 0.5 * room_size, 0.0]);
+    camera.set_fov(0.37 * std::f64::consts::PI);
+    camera.set_position(&[0.0, - 0.49 * room_width, 0.0]);
     camera.set_direction(&[0.0, 1.0, 0.0]);
     // camera.set_lookat(&[0.0, 0.0, 0.0]);
     camera.set_up(&[0.0, 0.0, 1.0]);
-    camera.set_fov(0.4 * std::f64::consts::PI);
+    camera.set_fov(0.3 * std::f64::consts::PI);
     camera.set_focus(1.0);
 
     scene.set_tree_type(TreeType::Oct);
 
     let renderer = Renderer::new(width, height, 0, 0, false);
     let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "rectangle_room_preview.ppm");
+    let gamma = 2.0;
+    print_ppm(&image, gamma, "rectangle_room_preview.ppm");
 
-    let renderer = Renderer::new(width, height, 32, 8, false);
-    let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "rectangle_room.ppm");
+    let gamma = 2.6;
+    let renderer = Renderer::new(width, height, 1, 32, false);
+    let sampling = 1024;
+    let mut image = Image::new(width, height);
+    for i in 0..sampling {
+        let delta = renderer.render(&scene, &camera);
+        mix_images(&mut image, &delta, i);
+        print_ppm(&image, gamma, "rectangle_room.ppm");
+    }
 }
 
 #[test]
@@ -307,11 +372,12 @@ fn cube_scene() {
 
     let renderer = Renderer::new(width, height, 0, 0, false);
     let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "cube_scene_preview.ppm");
+    let gamma = 2.0;
+    print_ppm(&image, gamma, "cube_scene_preview.ppm");
 
     let renderer = Renderer::new(width, height, 32, 8, false);
     let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "cube_scene.ppm");
+    print_ppm(&image, gamma, "cube_scene.ppm");
 }
 
 #[test]
@@ -393,7 +459,8 @@ fn sphere_in_box() {
 
     let renderer = Renderer::new(width, height, 0, 0, false);
     let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "sphere_in_box_preview.ppm");
+    let gamma = 2.0;
+    print_ppm(&image, gamma, "sphere_in_box_preview.ppm");
 
     let renderer = Renderer::new(width, height, 1, 8, false);
     let sampling = 128;
@@ -401,7 +468,7 @@ fn sphere_in_box() {
     for i in 0..sampling {
         let delta = renderer.render(&scene, &camera);
         mix_images(&mut image, &delta, i);
-        print_ppm(&image, "sphere_in_box.ppm");
+        print_ppm(&image, gamma, "sphere_in_box.ppm");
     }
 }
 
@@ -423,6 +490,8 @@ fn random_scene() {
     const MIN_RADIUS : f64 = 0.2;
     const MAX_RADIUS : f64 = 0.4;
 
+    const SPHERE_PROBABILITY : f64 = 0.66666666;
+
     const LAMBERTIAN_PROBABILITY : f64 = 0.3333;
     const METAL_PROBABILITY : f64 = 0.3333;
     // DIELECTRIC_PROBABILITY is 1 - LAMBERTIAN_PROBABILITY - METAL_PROBABILITY
@@ -443,8 +512,15 @@ fn random_scene() {
             let mut y = j as f64 + rng.gen::<f64>() * (1.0 - radius);
             y = MIN_Y + (MAX_Y - MIN_Y) * y / N_SPHERES_Y as f64;
 
-            let sphere = Box::new(Sphere::<f64>::new(radius));
-            let sphere = Translation::new(sphere, Vec3::from_array([x, y, radius]));
+            let hitable_select = rng.gen::<f64>();
+            let hitable : Box<Hitable<f64>> = if hitable_select < SPHERE_PROBABILITY {
+                let hitable = Box::new(Sphere::<f64>::new(radius));
+                Box::new(Translation::new(hitable, Vec3::from_array([x, y, radius])))
+            } else {
+                let l = radius * 2.0 * 0.8;
+                let hitable = Box::new(Cube::<f64>::new(l, l, l));
+                Box::new(Translation::new(hitable, Vec3::from_array([x, y, radius * 0.8])))
+            };
 
             let color = Vec3::from_array([rng.gen::<f64>(), rng.gen::<f64>(), rng.gen::<f64>()]);
             let texture = Box::new(UniformTexture::new(color));
@@ -458,7 +534,7 @@ fn random_scene() {
                 let n = MIN_REFRACTIVE + (MAX_REFRACTIVE - MIN_REFRACTIVE) * rng.gen::<f64>();
                 Box::new(DielectricMaterial::<f64>::new(texture, n))
             };
-            let actor = Actor::<f64> { hitable: Box::new(sphere), material};
+            let actor = Actor::<f64> { hitable, material};
             scene.add_actor(actor);
         }
     }
@@ -469,7 +545,7 @@ fn random_scene() {
     let sphere = Translation::new(sphere, Vec3::from_array([0.0, 0.0, radius]));
     let color = Vec3::from_array([0.78, 1.0, 0.78]);
     let texture = Box::new(UniformTexture::new(color));
-    let material = DielectricMaterial::<f64>::new(texture, 2.0);
+    let material = DielectricMaterial::<f64>::new(texture, 2.4);
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
@@ -499,21 +575,21 @@ fn random_scene() {
     let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
     scene.add_actor(actor);
 
-    // Sphere used as floor
-    let radius = 2000.0;
+    // Rectangle used as floor
+    let length = 2000.0;
     let color0 = Vec3::from_array([1.0, 1.0, 1.0]);
     let color1 = Vec3::from_array([0.8, 0.8, 0.8]);
     let texture0 = UniformTexture::new(color0);
     let texture1 = UniformTexture::new(color1);
     let texture = Box::new(CheckerTexture::new(Box::new(texture0), Box::new(texture1)));
 
-    let sphere = Box::new(Sphere::<f64>::new(radius));
-    let sphere = Translation::new(sphere, Vec3::from_array([0.0, 0.0, -radius]));
-    let material = LambertianMaterial::<f64>::new(texture, 0.75);
-    let actor = Actor::<f64> { hitable: Box::new(sphere), material: Box::new(material)};
+    let hitable = Box::new(Rectangle::<f64>::new(length, Axis::X, length, Axis::Y));
+    let hitable = Box::new(Translation::new(hitable, Vec3::from_array([0.0, 0.0, -radius])));
+    let material = Box::new(LambertianMaterial::<f64>::new(texture, 0.75));
+    let actor = Actor::<f64> { hitable, material };
     scene.add_actor(actor);
 
-    let mul = 160;
+    let mul = 120;
     let width = 16 * mul;
     let height = 9 * mul;
     let aspect = width as f64 / height as f64;
@@ -536,15 +612,16 @@ fn random_scene() {
 
     let renderer = Renderer::new(width/4, height/4, 0, 2, false);
     let image = renderer.render(&mut scene, &camera);
-    print_ppm(&image, "random_scene_preview.ppm");
+    let gamma = 2.0;
+    print_ppm(&image, gamma, "random_scene_preview.ppm");
 
     let mut image = Image::new(width, height);
     let renderer = Renderer::new(width, height, 1, 16, false);
-    let sampling = 128;
+    let sampling = 1024;
     for i in 0..sampling {
         let delta = renderer.render(&scene, &camera);
         mix_images(&mut image, &delta, i);
-        print_ppm(&image, "random_scene.ppm");
+        print_ppm(&image, gamma, "random_scene.ppm");
     }
 }
 
